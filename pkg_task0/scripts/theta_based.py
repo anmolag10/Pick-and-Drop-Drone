@@ -5,7 +5,7 @@ from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 import math
 
-theta=0 #global variable so it can be accessed in turtle_revolve
+theta=0 #global variable so it can be accessed in turtle_revolve function
 
 def turtle_pose_callback(pose):
 	global theta
