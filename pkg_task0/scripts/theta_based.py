@@ -16,7 +16,7 @@ def turtle_pose_callback(pose):
 def turtle_revolve():
     rospy.init_node('node_turtle_revolve', anonymous=True)
 
-    rospy.Subscriber("turtle1/pose", Pose, turtle_pose_callback)
+    rospy.Subscriber('turtle1/pose', Pose, turtle_pose_callback)
 
     pub = rospy.Publisher('turtle1/cmd_vel', Twist, queue_size=10)
     vel = Twist()
@@ -30,14 +30,14 @@ def turtle_revolve():
     # (considering a buffer/tolerance of 0.02 radians)
     while theta < 2 * math.pi - 0.02:
     distance = radius * theta
-    rospy.loginfo("Moving in a circle\n" + str(distance))
+    rospy.loginfo('Moving in a circle\n' + str(distance))
     pub.publish(vel)
     rate.sleep()
 
     # Reinitialising velocity message to 0 so that the turtle stops
     vel = Twist()
     pub.publish(vel)
-    rospy.loginfo("goal reached")
+    rospy.loginfo('goal reached')
 
     rospy.spin()
 
