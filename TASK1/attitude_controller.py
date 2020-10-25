@@ -60,8 +60,17 @@ class Edrone():
         self.ItermHeight=0
         self.converted_throttle=0
         self.height=0
+        
+        self.rollErrorMsg=Float32()
+        self.rollErrorMsg.data=0
+        self.yawErrorMsg=Float32()
+        self.yawErrorMsg.data=0        
+        self.pitchErrorMsg=Float32()
+        self.pitchErrorMsg.data=0
+        self.AltitudeErrorMsg=Float32()
+        self.AltitudeErrorMsg.data=0  
 
-
+  
         # -----------------------Add other required variables for pid here ----------------------------------------------
         #
 
@@ -76,9 +85,10 @@ class Edrone():
 
         # Publishing /edrone/pwm, /roll_error, /pitch_error, /yaw_error
         self.pwm_pub = rospy.Publisher('/edrone/pwm', prop_speed, queue_size=1)
-        self.roll_error_pub=rospy.Publisher('roll_error', PidTune,queue_size=1 )
-        self.pitch_error_pub=rospy.Publisher('pitch_error',PidTune,queue_size=1)
-        self.yaw_error_pub=rospy.Publisher('/yaw_error',PidTune,queue_size=1)
+        self.roll_error_pub=rospy.Publisher('roll_error', Float32,queue_size=1 )
+        self.pitch_error_pub=rospy.Publisher('pitch_error',Float32,queue_size=1)
+        self.yaw_error_pub=rospy.Publisher('/yaw_error',Float32,queue_size=1)
+        self.altitude_error_pub=rospy.Publisher('/altitude_error',Float32,queue_size=1)
 
         # ------------------------Add other ROS Publishers here-----------------------------------------------------
 
@@ -201,7 +211,7 @@ class Edrone():
 
         # Also convert the range of 1000 to 2000 to 0 to 1024 for throttle here itslef
 
-        self.converted_throttle=self.setpoint_cmd[0]*1.023-1023
+        self.converted_throttle=self.setpoint_cmd[3]*1.023-1023
 
      
 
@@ -213,24 +223,32 @@ class Edrone():
 
         self.ItermPitch=self.boundCheck((self.ItermPitch+self.error[0])*self.Ki[0]/self.sample_time)
         self.Pitch_Out= self.boundCheck(self.Kp[0]*self.error[0] + self.ItermPitch + self.Kd[0]*(self.error[0] - self.prev_values[0]))
+        self.pitchErrorMsg.data=self.error[0]
         self.prev_values[0]=self.error[0]
 
         self.ItermRoll=self.boundCheck((self.ItermRoll+self.error[1])*self.Ki[1]/self.sample_time)
         self.Roll_Out= self.boundCheck(self.Kp[1]*self.error[1] + self.ItermRoll+ self.Kd[1]*(self.error[1] - self.prev_values[1]))
+        self.rollErrorMsg.data=self.error[1]
         self.prev_values[1]=self.error[1]
 
         self.ItermYaw=self.boundCheck((self.ItermYaw+self.error[2])*self.Ki[2]/self.sample_time)
         self.Yaw_Out= self.boundCheck(self.Kp[2]*self.error[2] + self.ItermYaw + self.Kd[2]*(self.error[2] - self.prev_values[2]))
+        self.yawErrorMsg.data=self.error[2]
         self.prev_values[2]=self.error[2]
 
         self.error[3]=3-self.height*self.sample_time
-        self.ItermHeight=self.boundCheck((self.ItermHeight+self.error[3])*self.ki[3]/self.sample_time)
+        self.ItermHeight=self.boundCheck((self.ItermHeight+self.error[3])*self.Ki[3]/self.sample_time)
+        self.altitudeErrorMsg.data=self.error[3]
         self.Altitude_Out=self.boundCheck(self.Kp[3]*self.error[3] + self.ItermHeight + self.Kd[3]*(self.error[3] - self.prev_values[3]))
+
+
 
         self.pwm_cmd.prop1=self.converted_throttle+self.Altitude_Out+self.Roll_Out+self.Pitch_Out+self.Yaw_Out
         self.pwm_cmd.prop2=self.converted_throttle+self.Altitude_Out-self.Roll_Out+self.Pitch_Out-self.Yaw_Out
         self.pwm_cmd.prop3=self.converted_throttle+self.Altitude_Out+self.Roll_Out-self.Pitch_Out-self.Yaw_Out
         self.pwm_cmd.prop4=self.converted_throttle+self.Altitude_Out-self.Roll_Out-self.Pitch_Out+self.Yaw_Out
+        
+        
 
         
 
@@ -256,6 +274,11 @@ class Edrone():
         # ------------------------------------------------------------------------------------------------------------------------
 
         self.pwm_pub.publish(self.pwm_cmd)
+        self.roll_error_pub.publish(self.rollErrorMsg)
+        self.yaw_error_pub.publish(self.yawErrorMsg)
+        self.pitch_error_pub.publish(self.pitchErrorMsg)
+        self.altitude_error_pub.publish(self.altitudeErrorMsg)
+
 
 
 if __name__ == '__main__':
