@@ -2,8 +2,9 @@
 
 from vitarana_drone.msg import *
 from pid_tune.msg import PidTune
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, LaserScan
 from std_msgs.msg import Float32
+
 import rospy
 import time
 import tf
@@ -42,20 +43,23 @@ class Edrone():
 
         # initial setting of Kp, Kd and ki for [roll, pitch, yaw]. eg: self.Kp[2] corresponds to Kp value in yaw axis
         # after tuning and computing corresponding PID parameters, change the parameters
-        self.Kp = [0, 0, 0]
-        self.Ki = [0, 0, 0]
-        self.Kd = [0, 0, 0]
-        self.prev_values=[0,0,0]
-        self.error=[0,0,0]
+        self.Kp = [0, 0, 0,0]
+        self.Ki = [0, 0, 0,0]
+        self.Kd = [0, 0, 0,0]
+        self.prev_values=[0,0,0,0]
+        self.error=[0,0,0,0]
         self.max_values=[1024,20124,1024,1024]
         self.min_values=[0,0,0,0]
         self.Roll_Out=0
         self.Pitch_Out=0
         self.Yaw_Out=0
+        self.Altitude_Out=0
         self.ItermPitch=0
         self.ItermRoll=0
         self.ItermYaw=0
+        self.ItermHeight=0
         self.converted_throttle=0
+        self.height=0
 
 
         # -----------------------Add other required variables for pid here ----------------------------------------------
@@ -86,7 +90,8 @@ class Edrone():
         rospy.Subscriber('/pid_tuning_roll', PidTune, self.roll_set_pid)
         rospy.Subscriber('/pid_tuning_yaw', PidTune, self.yaw_set_pid) 
         rospy.Subscriber('/pid_tuning_pitch', PidTune, self.pitch_set_pid) 
-       # rospy.Subscriber('/pid_tuning_altitude', PidTune, self.altitude_set_pid)      
+        rospy.Subscriber('/pid_tuning_altitude', PidTune, self.altitude_set_pid)
+        rospy.Subscriber('/edrone/range_finder_bottom', LaserScan, self.drone_altitude_callback)      
       
         # -------------------------Add other ROS Subscribers here----------------------------------------------------
         # ------------------------------------------------------------------------------------------------------------
@@ -109,6 +114,18 @@ class Edrone():
             return val
 
     
+    def drone_altitude_callback(self,range):
+         rangeList=[]
+         for i in range.ranges :
+             rangeList.append(i)
+         self.height=max(rangeList)
+
+
+           
+        
+
+
+
 
     def imu_callback(self, msg):
 
@@ -146,6 +163,12 @@ class Edrone():
         self.Kp[2] = pitch.Kp * 0.06  # This is just for an example. You can change the ratio/fraction value accordingly
         self.Ki[2] = pitch.Ki * 0.008
         self.Kd[2] = pitch.Kd * 0.3
+    def altitude_set_pid( self, altitude):
+        self.Kp[3]=altitude.Kp* 0.006
+        self.Ki[3]=altitude.Kp*0.008
+        self.Kd[3]=altitude.Kp*0.3
+
+
        
     # ----------------------------------------------------------------------------------------------------------------------
 
@@ -178,7 +201,9 @@ class Edrone():
 
         # Also convert the range of 1000 to 2000 to 0 to 1024 for throttle here itslef
 
-        self.converted_throttle=self.setpoint_cmd[3]*1.023-1023
+        self.converted_throttle=self.setpoint_cmd[0]*1.023-1023
+
+     
 
 
 
@@ -198,10 +223,14 @@ class Edrone():
         self.Yaw_Out= self.boundCheck(self.Kp[2]*self.error[2] + self.ItermYaw + self.Kd[2]*(self.error[2] - self.prev_values[2]))
         self.prev_values[2]=self.error[2]
 
-        self.pwm_cmd.prop1=self.converted_throttle+self.Roll_Out+self.Pitch_Out+self.Yaw_Out
-        self.pwm_cmd.prop2=self.converted_throttle-self.Roll_Out+self.Pitch_Out-self.Yaw_Out
-        self.pwm_cmd.prop3=self.converted_throttle+self.Roll_Out-self.Pitch_Out-self.Yaw_Out
-        self.pwm_cmd.prop4=self.converted_throttle-self.Roll_Out-self.Pitch_Out+self.Yaw_Out
+        self.error[3]=3-self.height*self.sample_time
+        self.ItermHeight=self.boundCheck((self.ItermHeight+self.error[3])*self.ki[3]/self.sample_time)
+        self.Altitude_Out=self.boundCheck(self.Kp[3]*self.error[3] + self.ItermHeight + self.Kd[3]*(self.error[3] - self.prev_values[3]))
+
+        self.pwm_cmd.prop1=self.converted_throttle+self.Altitude_Out+self.Roll_Out+self.Pitch_Out+self.Yaw_Out
+        self.pwm_cmd.prop2=self.converted_throttle+self.Altitude_Out-self.Roll_Out+self.Pitch_Out-self.Yaw_Out
+        self.pwm_cmd.prop3=self.converted_throttle+self.Altitude_Out+self.Roll_Out-self.Pitch_Out-self.Yaw_Out
+        self.pwm_cmd.prop4=self.converted_throttle+self.Altitude_Out-self.Roll_Out-self.Pitch_Out+self.Yaw_Out
 
         
 
@@ -236,3 +265,4 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         e_drone.pid()
         r.sleep()
+
