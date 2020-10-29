@@ -86,9 +86,8 @@ class Position():
 
     # PID algorithm
     def pid(self):
-        # When program first starts, GPS location is not updated
-        # so current location will be [0,0,0] which causes undesired motion
-        # Hence condition to bypass this is used
+        # Initially, GPS location is not updated,i.e., [0,0,0]
+        # To avoid undesired motion due to this the following is used.
         # It returns to the main function if any values are 0
         if not np.any(self.currentloc):
             return
