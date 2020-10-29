@@ -39,7 +39,7 @@ class Position():
         
         # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1550]
         # Value of [Kp, Ki, Kd][Longitude] : [475, 0, 1450]
-        # Value of [Kp, Ki, Kd][Altitude]] : [225, 4, 465]
+        # Value of [Kp, Ki, Kd][Altitude] : [225, 4, 465]
         
         self.Kp = np.array([720 * 6000, 475 * 6000, 225 * 0.6])
         self.Ki = np.array([55 * 0.08, 0 * 0.8, 4 * 0.008])
