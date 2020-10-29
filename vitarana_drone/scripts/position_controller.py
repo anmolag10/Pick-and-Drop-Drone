@@ -94,7 +94,6 @@ class Position():
 
         # Calculating error term and rounding off to 7 decimal points
         # Rounding off because double precision is overkill for PID
-        
         error = np.round((self.setpoints[self.loc] - self.currentloc), 7)
 
         # Calculating derivative term and rounding off
@@ -114,7 +113,7 @@ class Position():
             ((self.Kp * error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
 
         # Calculating throttle, roll and pitch and checking limits
-        # 1500 is the median value for all of them
+        # Since 1500 is the mid value,
         # Direction will change according to sign of output
         throttle = self.checkLimits(1500.0 + output[2])
         pitch = self.checkLimits(1500.0 + output[1])
@@ -167,8 +166,8 @@ class Position():
 if __name__ == '__main__':
 
     e_drone_position = Position()
-    # Defining rospy rate such that PID algorithm loops are desired sampling
-    # rate
+    # Defining rospy rate such that PID algorithm loops at the
+    # desired sampling rate
     r = rospy.Rate(e_drone_position.sample_rate)
     while not rospy.is_shutdown():
         # Calling PID function
