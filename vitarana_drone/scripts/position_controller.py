@@ -93,8 +93,8 @@ class Position():
             return
 
         # Calculating error term and rounding off to 7 decimal points
-        # Rounding off because learning resource provided for improving script,
-        # suggests that double precision is overkill for PID
+        # Rounding off because double precision is overkill for PID
+        
         error = np.round((self.setpoints[self.loc] - self.currentloc), 7)
 
         # Calculating derivative term and rounding off
