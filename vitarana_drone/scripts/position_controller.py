@@ -33,9 +33,9 @@ class Position():
         self.setpoint_rpy.rcThrottle = 0
 
         # Numpy array for PID gains : [Latitude, Longitude, Altitude]
-        # Coefficient fractions for Pid[Latitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
-        # Coefficient fractions for Pid[Longitude] [Kp, Ki, Kd] : [6000, 0.8, 12000] 
-        # Coefficient fractions for Pid[Altitude] [Kp, Ki, Kd] : [0.6, 0.008, 0.3]
+        # Coefficient ratios for Pid[Latitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
+        # Coefficient ratios for Pid[Longitude] [Kp, Ki, Kd] : [6000, 0.8, 12000] 
+        # Coefficient ratios for Pid[Altitude] [Kp, Ki, Kd] : [0.6, 0.008, 0.3]
         
         # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1550]
         # Value of [Kp, Ki, Kd][Longitude] : [475, 0, 1450]
