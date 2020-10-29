@@ -42,8 +42,9 @@ class Attitude():
         self.pwm_cmd.prop2 = 0.0
         self.pwm_cmd.prop3 = 0.0
         self.pwm_cmd.prop4 = 0.0
+        
 
-        # Numpy array for PID gains : [Pitch, Roll, Yaw]
+        # Numpy array for PID gains : [Pitch, Roll, Yaw] * coefficient ratios
         self.Kp = np.array([20, 20, 349]) * 0.06
         self.Ki = np.array([11, 11, 0]) * 0.008
         self.Kd = np.array([36, 36, 0]) * 0.03
@@ -128,10 +129,9 @@ class Attitude():
         self.drone_orientation_euler = np.array(
             tf.transformations.euler_from_quaternion(
                 self.drone_orientation_quaternion))
-
-        # When program first starts, setpoints are not updated
-        # so current setpoint will be [0,0,0] which causes undesired motion
-        # Hence condition to bypass this is used
+        
+        # Initially, setpoint is not updated,i.e., [0,0,0]
+        # To avoid undesired motion due to this, the following is used.
         # It returns to the main function if any values are 0
         if not np.any(self.setpoint_cmd):
             return
@@ -144,8 +144,7 @@ class Attitude():
         throttle = self.throttle * 1.023 - 1023
 
         # Calculating error term and rounding off to 7 decimal points
-        # Rounding off because learning resource provided for improving script,
-        # suggests that double precision is overkill for PID
+        # Rounding off because double precision is overkill for PID
         error = np.round(
             (self.setpoint_euler -
              np.degrees(
@@ -168,7 +167,7 @@ class Attitude():
         output = np.round(
             ((self.Kp * error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
 
-        # Motor Mixing (calculating PWM values for motors
+        # Motor Mixing Equations (calculating PWM values for motors)
         # A combination of throttle, pitch, roll and yaw
         # Limits are checked using checkLimits function defined earlier
         self.pwm_cmd.prop1 = self.checkLimits(
@@ -195,8 +194,8 @@ class Attitude():
 if __name__ == '__main__':
 
     e_drone_attitude = Attitude()
-    # Defining rospy rate such that PID algorithm loops are desired sampling
-    # rate
+    # Defining rospy rate such that PID algorithm loops at 
+    # the desired sampling rate
     r = rospy.Rate(e_drone_attitude.sample_rate)
     while not rospy.is_shutdown():
         # Calling PID function
