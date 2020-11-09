@@ -17,7 +17,7 @@ class Position():
 
         # Numpy array for GPS coordinate setpoints
         self.setpoints = np.array(
-            [[19.0009248718, 71.9998318945, 25.16], [19.0007046575, 71.9998955286, 25.16], [19.0007046575, 71.9998955286, 22.86], [19.0007046575, 71.9998955286, 22.16],[19.0009248718, 71.9998318945, 25.16]])
+        [[19.0009248718, 71.9998318945, 25.16], [19.0007046575, 71.9998955286, 25.16], [19.0007046575, 71.9998955286, 22.86], [19.0007046575, 71.9998955286, 22.16],[19.0009248718, 71.9998318945, 25.16],[19.0009248718, 71.9998318945, 22.16]])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -60,7 +60,7 @@ class Position():
         self.detectconf=False
 
         #Detected coordinates
-        self.detectedcord=[0.0,0.0,0.0]
+        self.detectedcord=np.array([0.0,0.0,0.0])
 
         self.gripperState = False
         # Publishing /edrone/drone_command, /altitude_error, /latitude_error,
@@ -165,34 +165,44 @@ class Position():
             error[1]) < 0.0000047487 and abs(
             error[0]) < 0.000004517 and abs(
                 error[2]) < 0.2:
+            if self.loc == 1:
+                if self.stabilize < 40:
+                    self.stabilize = self.stabilize + 1
+                    return
             # Checking if drone has reached threshold box of final setpoint
             # Publishing stop signal (throttle = 1000) for drone to land
             if self.loc == 2:
-                while self.detectconf is not True:
-                    print('Hovering for detectiom')
-                print(self.detectedcord)
-                if self.detectconf==True:
+                if self.detectconf is not True:
+                    print('Hovering for detectiom') 
+                    return
+                else:
                     print('detection complete')
+                    print(self.detectedcord)
+                    
     
             if self.loc == 3:
+
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_rpy.rcRoll = 1500
                 self.setpoint_rpy.rcPitch = 1500
                 self.setpoint_rpy.rcYaw = 1500
                 self.setpoint_pub.publish(self.setpoint_rpy)
                 gripper_response = self.gripper_activate(self.gripperState)
+                if self.stabilize < 30:
+                    self.stabilize = self.stabilize + 1
+                    return
                 print('GripperState:'+str(self.gripperState)+str(gripper_response))
                 
             # Counting till 10 using stabilize variable for drone to stabilize
             # at setpoint
-            if self.loc == 4:
+            if self.loc == 5:
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_rpy.rcRoll = 1500
                 self.setpoint_rpy.rcPitch = 1500
                 self.setpoint_rpy.rcYaw = 1500
                 self.setpoint_pub.publish(self.setpoint_rpy)
                 return
-            if self.stabilize < 30:
+            if self.stabilize < 10:
                 self.stabilize = self.stabilize + 1
                 return
             # Increasing value of location index so that next GPS setpoint is
