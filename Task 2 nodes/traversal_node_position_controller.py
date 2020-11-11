@@ -166,7 +166,7 @@ class Position():
             error[0]) < 0.000004517 and abs(
                 error[2]) < 0.2:
             if self.loc == 1:
-                if self.stabilize < 40:
+                if self.stabilize < 45:
                     self.stabilize = self.stabilize + 1
                     return
             # Checking if drone has reached threshold box of final setpoint
