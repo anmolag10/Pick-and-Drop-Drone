@@ -34,15 +34,15 @@ class Position():
 
         # Numpy array for PID gains : [Latitude, Longitude, Altitude]
         # Coefficient ratios for Pid[Latitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
-        # Coefficient ratios for Pid[Longitude] [Kp, Ki, Kd] : [6000, 0.8, 12000]
+        # Coefficient ratios for Pid[Longitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
         # Coefficient ratios for Pid[Altitude] [Kp, Ki, Kd] : [0.6, 0.008, 0.3]
 
-        # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1550]
-        # Value of [Kp, Ki, Kd][Longitude] : [475, 0, 1450]
+        # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1750]
+        # Value of [Kp, Ki, Kd][Longitude] : [720, 55, 1650]
         # Value of [Kp, Ki, Kd][Altitude] : [225, 4, 465]
-        self.Kp = np.array([720 * 6000, 475 * 6000, 225 * 0.6])
-        self.Ki = np.array([55 * 0.08, 0 * 0.8, 4 * 0.008])
-        self.Kd = np.array([1550 * 12000, 1450 * 12000, 465 * 0.3])
+        self.Kp = np.array([720 * 6000, 720 * 6000, 225 * 0.6])
+        self.Ki = np.array([55 * 0.08, 55 * 0.08, 4 * 0.008])
+        self.Kd = np.array([1750 * 12000, 1750 * 12000, 465 * 0.3])
 
         # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -165,15 +165,14 @@ class Position():
             error[1]) < 0.0000047487 and abs(
             error[0]) < 0.000004517 and abs(
                 error[2]) < 0.2:
-            if self.loc == 1:
-                if self.stabilize < 45:
-                    self.stabilize = self.stabilize + 1
-                    return
             # Checking if drone has reached threshold box of final setpoint
             # Publishing stop signal (throttle = 1000) for drone to land
             if self.loc == 2:
-                if self.detectconf is not True:
-                    print('Hovering for detectiom') 
+		if self.stabilize < 45:
+                    self.stabilize = self.stabilize + 1
+                    return
+                elif self.detectconf is not True:
+                    print('Hovering for detection') 
                     return
                 else:
                     print('detection complete')
@@ -181,7 +180,6 @@ class Position():
                     
     
             if self.loc == 3:
-
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_rpy.rcRoll = 1500
                 self.setpoint_rpy.rcPitch = 1500
