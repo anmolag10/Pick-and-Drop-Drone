@@ -19,7 +19,7 @@ class Position():
 
         # Numpy array for GPS coordinate setpoints
         self.setpoints = np.array(
-            [[4.0, 0.0, 3.0], [19.0000451704, 72.0, 0.31]])
+            [[0.0, 4.0, 3.0], [19.0000451704, 72.0, 0.31]])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -42,9 +42,9 @@ class Position():
         # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1750]
         # Value of [Kp, Ki, Kd][Longitude] : [720, 55, 1650]
         # Value of [Kp, Ki, Kd][Altitude] : [225, 4, 465]
-        self.Kp = np.array([20 * 0.006, 20 * 0.006, 225 * 0.6])
-        self.Ki = np.array([4 * 0.008, 4 * 0.008, 4 * 0.008])
-        self.Kd = np.array([60 * 0.03, 40 * 0.03, 465 * 0.3])
+        self.Kp = np.array([225 * 0.6, 225 * 0.6, 225 * 0.6])
+        self.Ki = np.array([0 * 0.008, 0 * 0.008, 4 * 0.008])
+        self.Kd = np.array([2665 * 0.3, 2665 * 0.3, 465 * 0.3])
 
         # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -103,7 +103,7 @@ class Position():
 	return input_arr
     
     def align_to_goal(self):
-	theta = math.degrees(math.atan2(self.long_to_y(self.setpoints[0,1]), self.lat_to_x(self.setpoints[0,0])))
+	theta = math.degrees(math.atan2((self.long_to_y(self.setpoints[0,1])-self.long_to_y(self.currentloc[1])), (self.lat_to_x(self.setpoints[0,0])-self.lat_to_x(self.currentloc[0]))))
 	theta = theta if theta >= 0 else theta + 360
 	theta = (theta + 270) % 360
 	theta = theta if theta < 180 else theta - 360
@@ -121,7 +121,7 @@ class Position():
         # Calculating error term and rounding off to 7 decimal points
         # Rounding off because double precision is overkill for PID
         error = np.round((self.setpoints[self.loc] - self.gps_to_xy(self.currentloc)), 7)
-	print(error)
+	print(self.currentloc)
 
         # Calculating derivative term and rounding off
         # / symbol allows divison for sample_time scalar with every element in the array
@@ -143,7 +143,7 @@ class Position():
         # Since 1500 is the mid value,
         # Direction will change according to sign of output
         throttle = self.checkLimits(1500.0 + output[2])
-        pitch = self.checkLimits(1500.0 + output[1])
+        pitch = self.checkLimits(1500.0 - output[1])
         roll = self.checkLimits(1500.0 + output[0])
 
         # Assigning prev_values with error for the next iteration
@@ -179,9 +179,11 @@ class Position():
             # Reinitialising stabilize to 0 so it can be used for next setpoint
             self.stabilize = 0'''
 
+	print(pitch, self.Kp[1] * error[1], self.Kd[1] * derivative[1])
+
         # Publishing final PID output on /edrone/drone_command for the attitude
         # controller
-        self.setpoint_rpy.rcRoll = roll
+        self.setpoint_rpy.rcRoll = 1500
         self.setpoint_rpy.rcPitch = pitch
         self.setpoint_rpy.rcYaw = 1500
         self.setpoint_rpy.rcThrottle = throttle
