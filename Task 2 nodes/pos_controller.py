@@ -103,12 +103,15 @@ class Position():
 	return input_arr
     
     def align_to_goal(self):
-	theta = math.degrees(math.atan2((self.long_to_y(self.setpoints[0,1])-self.long_to_y(self.currentloc[1])), (self.lat_to_x(self.setpoints[0,0])-self.lat_to_x(self.currentloc[0]))))
+	X = self.lat_to_x(self.setpoints[0,0]) - self.lat_to_x(self.currentloc[0])
+	Y = self.long_to_y(self.setpoints[0,1]) - self.long_to_y(self.currentloc[1])
+	theta = math.degrees(math.atan2(Y, X))
 	theta = theta if theta >= 0 else theta + 360
+	goal_distance = X * math.sin(theta) + Y * math.cos(theta)
 	theta = (theta + 270) % 360
 	theta = theta if theta < 180 else theta - 360
 	theta = (theta + 540) / 0.36
-	return theta
+	return theta , goal_distance
 
     # PID algorithm
     def pid(self):
