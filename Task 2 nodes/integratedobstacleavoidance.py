@@ -177,13 +177,13 @@ class Position():
               if self.ranges[1]>1.5:
                     self.setpoint_rpy.rcRoll = 1505
                     self.setpoint_rpy.rcPitch = 1500
-                    self.setpoint_rpy.rcYaw = 15000
+                    self.setpoint_rpy.rcYaw = 1500
                     self.setpoint_rpy.rcThrottle = 1500
                     self.setpoint_pub.publish(self.setpoint_rpy)
               else:
                     self.setpoint_rpy.rcRoll = 1495
                     self.setpoint_rpy.rcPitch = 1500
-                    self.setpoint_rpy.rcYaw = 15000
+                    self.setpoint_rpy.rcYaw = 1500
                     self.setpoint_rpy.rcThrottle = 1500
                     self.setpoint_pub.publish(self.setpoint_rpy)
 
