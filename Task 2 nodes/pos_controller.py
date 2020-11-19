@@ -19,7 +19,7 @@ class Position():
 
         # Numpy array for GPS coordinate setpoints
         self.setpoints = np.array(
-            [[19.0, 72.0, 3.0], [19.0000451704, 72.0, 0.31]])
+            [[4, 4.0, 3.0], [19.0000451704, 72.0, 0.31]])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -116,7 +116,8 @@ class Position():
 
         # Calculating error term and rounding off to 7 decimal points
         # Rounding off because double precision is overkill for PID
-        error = np.round((self.setpoints[self.loc] - self.currentloc), 7)
+	current = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
+        error = np.round((self.setpoints[self.loc] - current), 7)
 
         # Calculating derivative term and rounding off
         # / symbol allows divison for sample_time scalar with every element in the array
