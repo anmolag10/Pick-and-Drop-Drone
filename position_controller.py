@@ -105,7 +105,7 @@ class Position():
         return -105292.0089353767 * (input_longitude - 72)
 
     def waypoint_generator(self, lat, lon, dist):
-        x0, y0 = self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1])
+        x0, y0 = self.lat_to_x(self.setpoints[3,0]), self.long_to_y(self.setpoints[3,1])
         x1, y1 = self.lat_to_x(lat), self.long_to_y(lon)
 	d = math.sqrt((x1-x0)**2 + (y1-y0)**2)
 	self.dt = self.dt + dist if (self.dt + dist) < d else d
@@ -290,4 +290,3 @@ if __name__ == '__main__':
         else:
             e_drone_position.delivery()
         r.sleep()
-
