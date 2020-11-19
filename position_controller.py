@@ -244,6 +244,7 @@ class Position():
 	#if (self.ranges > 3).all():
 	if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 1:
 		self.waypoint = self.waypoint_generator(self.detectedcord[0], self.detectedcord[1], 5)
+		self.prev_values = np.array([0.0, 0.0, 0.0])
 	self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
 
 	#elif self.ranges[3] < 4 and self.ranges[3]>0.28:
