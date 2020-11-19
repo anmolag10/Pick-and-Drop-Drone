@@ -46,7 +46,7 @@ class Position():
 
         self.Kp2 = np.array([225 * 0.6, 225 * 0.6, 225 * 0.6])
         self.Ki2 = np.array([0 * 0.008, 0 * 0.008, 4 * 0.008])
-        self.Kd2 = np.array([2665 * 0.3, 2265 * 0.3, 465 * 0.3])       
+        self.Kd2 = np.array([865 * 0.3, 865 * 0.3, 465 * 0.3])       
 
          # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -243,7 +243,7 @@ class Position():
 	self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
 	#if (self.ranges > 3).all():
 	if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 1:
-		self.waypoint = self.waypoint_generator(self.detectedcord[0], self.detectedcord[1], 18)
+		self.waypoint = self.waypoint_generator(self.detectedcord[0], self.detectedcord[1], 5)
 	self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
 
 	#elif self.ranges[3] < 4 and self.ranges[3]>0.28:
