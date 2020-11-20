@@ -110,7 +110,6 @@ class Position():
         x0, y0 = self.lat_to_x(lat1), self.long_to_y(lon1)
         x1, y1 = self.lat_to_x(lat2), self.long_to_y(lon2)
         d = math.sqrt((x1-x0)**2 + (y1-y0)**2)
-        print(d)
         self.dt = self.dt + dist if (self.dt + dist) < d else d
         t = self.dt / d
         waypoint = np.array([((1-t)*x0 + t*x1), ((1-t)*y0 + t*y1), 25.16])
@@ -139,7 +138,29 @@ class Position():
     def checkGripper(self, data):
         if data.data == "True":
             self.gripperState = True
-       
+
+    def pid(self):
+	self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
+
+	self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
+	derivative = np.round(
+            ((self.del_error - self.prev_values) / self.sample_time), 7)
+	self.integral = np.round(
+            ((self.integral + self.del_error) * self.sample_time), 7)
+	output = np.round(
+            ((self.Kp2 * self.del_error) + (self.Ki2 * self.integral) + (self.Kd2 * derivative)), 7)
+
+	throttle = self.checkLimits(1500.0 + output[2])
+        pitch = self.checkLimits(1500.0 - output[1])
+        roll = self.checkLimits(1500.0 + output[0])
+
+	self.prev_values = self.del_error
+
+	self.setpoint_rpy.rcRoll = roll
+        self.setpoint_rpy.rcPitch = pitch
+        self.setpoint_rpy.rcYaw = 1500
+        self.setpoint_rpy.rcThrottle = throttle
+        self.setpoint_pub.publish(self.setpoint_rpy)
 
     # PID algorithm
     def pickup(self):
@@ -149,60 +170,21 @@ class Position():
         if not np.any(self.currentloc):
             return
 
-        # Calculating error term and rounding off to 7 decimal points
-        # Rounding off because double precision is overkill for PID
-        self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
             self.waypoint, self.t = self.waypoint_generator(self.setpoints[0,0], self.setpoints[0,1], self.pickuploc[0], self.pickuploc[1], 12)
 
-	self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
-
-        # Calculating derivative term and rounding off
-        # / symbol allows divison for sample_time scalar with every element in the array
-        derivative = np.round(
-            ((self.del_error - self.prev_values) / self.sample_time), 7)
-
-        # Calculating integral term and rounding off
-        # * symbol allows multiplication for sample_time scalar with every element in the array
-        self.integral = np.round(
-            ((self.integral + self.del_error) * self.sample_time), 7)
-
-        # Calculating PID output and rounding off
-        # * symbol for numpy arrays allows multiplication of the corresponding elements
-        # output = [out_latitude, out_longitude, out_altitude]
-        output = np.round(
-            ((self.Kp2 * self.del_error) + (self.Ki2 * self.integral) + (self.Kd2 * derivative)), 7)
-
-        # Calculating throttle, roll and pitch and checking limits
-        # Since 1500 is the mid value,
-        # Direction will change according to sign of output
-        throttle = self.checkLimits(1500.0 + output[2])
-        pitch = self.checkLimits(1500.0 - output[1])
-        roll = self.checkLimits(1500.0 + output[0])
-
-        # Assigning prev_values with error for the next iteration
-        self.prev_values = self.del_error
-
-        # Publishing final PID output on /edrone/drone_command for the attitude
-        # controller
-        self.setpoint_rpy.rcRoll = roll
-        self.setpoint_rpy.rcPitch = pitch
-        self.setpoint_rpy.rcYaw = 1500
-        self.setpoint_rpy.rcThrottle = throttle
-        self.setpoint_pub.publish(self.setpoint_rpy)
+	self.pid()
 
 	if self.t == 1:
             if abs(self.del_error[0]) > 0.1:
                 return
             elif self.detectconf is not True:
                 self.waypoint[2] = 22.86
-                print('Hovering for detection') 
             else:
                 self.waypoint[2] = 22.16
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_pub.publish(self.setpoint_rpy)
                 gripper_response = self.gripper_activate(self.gripperState)
-                print('GripperState:'+str(self.gripperState)+str(gripper_response))
                 if gripper_response.result is True:
                         self.delivery_flag = 1
                         self.prev_values = np.array([0,0,0])
@@ -210,42 +192,17 @@ class Position():
                         self.t = 0
 
     def delivery(self):
-        if not np.any(self.currentloc):
-                return
-        self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
         #if (self.ranges > 3).all():
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
-                
             self.waypoint, self.t = self.waypoint_generator(self.setpoints[3,0], self.setpoints[3,1], self.detectedcord[0], self.detectedcord[1], 25)
-        self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
 
         #elif self.ranges[3] < 4:
         #    self.del_error = np.round(np.array([(2-self.ranges[3]), 1.5, (25.16-self.currentlocxy[2])]), 7)
 
         #elif self.ranges[4] < 4 :
         #    self.del_error = np.round(np.array([-1.5, (2-self.ranges[4]), (25.16-self.currentlocxy[2])]), 7)
-        
 
-        derivative = np.round(
-            ((self.del_error - self.prev_values) / self.sample_time), 7)
-        self.integral = np.round(
-            ((self.integral + self.del_error) * self.sample_time), 7)
-
-        output = np.round(
-            ((self.Kp2 * self.del_error) + (self.Ki2 * self.integral) + (self.Kd2 * derivative)), 7)
-
-
-        throttle = self.checkLimits(1500.0 + output[2])
-        pitch = self.checkLimits(1500.0 - output[1])
-        roll = self.checkLimits(1500.0 + output[0])
-
-        self.prev_values = self.del_error
-
-        self.setpoint_rpy.rcRoll = roll
-        self.setpoint_rpy.rcPitch = pitch
-        self.setpoint_rpy.rcYaw = 1500
-        self.setpoint_rpy.rcThrottle = throttle
-        self.setpoint_pub.publish(self.setpoint_rpy)
+	self.pid()
 
 	if self.t == 1:
             if abs(self.del_error[0]) > 0.1:
@@ -254,13 +211,8 @@ class Position():
                 self.waypoint[2] = self.detectedcord[2]
 	    elif abs(self.del_error[2]) < 0.1:
 		gripper_response = self.gripper_activate(False)
-		if gripper_response is not False:
-			return
                 
-
 # ------------------------------------------------------------------------------------------------------------
-
-
 if __name__ == '__main__':
 
     e_drone_position = Position()
