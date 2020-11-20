@@ -15,16 +15,10 @@ class Position():
         # initializing ros node with name position_controller
         rospy.init_node('node_position_controller')
 
-        # Numpy array for GPS coordinate setpoints
-        self.setpoints = np.array(
-        [[19.0009248718, 71.9998318945, 25.16], [19.0007046575, 71.9998955286, 25.16], [19.0007046575, 71.9998955286, 22.86], [19.0007046575, 71.9998955286, 22.16],[19.0007046575, 71.9998955286, 25.16]])
+        self.spawnloc = np.array([19.0009248718, 71.9998318945, 22.16])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
-        # Index of GPS setpoint that the drone is headed towards
-        self.loc = 0
-        # Count for Stability
-        self.stabilize = 0
         # Drone Command message of type edrone_cmd and initialisation
         self.setpoint_rpy = edrone_cmd()
         self.setpoint_rpy.rcRoll = 0
@@ -32,23 +26,12 @@ class Position():
         self.setpoint_rpy.rcYaw = 0
         self.setpoint_rpy.rcThrottle = 0
 
-        # Numpy array for PID gains : [Latitude, Longitude, Altitude]
-        # Coefficient ratios for Pid[Latitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
-        # Coefficient ratios for Pid[Longitude] [Kp, Ki, Kd] : [6000, 0.08, 12000]
-        # Coefficient ratios for Pid[Altitude] [Kp, Ki, Kd] : [0.6, 0.008, 0.3]
+        # Numpy array for PID gains : [x, y, z] * coefficient ratio
+        self.Kp = np.array([225, 225, 225]) * 0.6
+        self.Ki = np.array([0, 0, 4]) * 0.008
+        self.Kd = np.array([1625, 1625, 465]) * 0.3       
 
-        # Value of [Kp, Ki, Kd][Latitude] : [720, 55, 1750]
-        # Value of [Kp, Ki, Kd][Longitude] : [720, 55, 1650]
-        # Value of [Kp, Ki, Kd][Altitude] : [225, 4, 465]
-        self.Kp = np.array([720 * 6000, 720 * 6000, 225 * 0.6])
-        self.Ki = np.array([55 * 0.08, 55 * 0.08, 4 * 0.008])
-        self.Kd = np.array([1650 * 12000, 1650 * 12000, 465 * 0.3])
-
-        self.Kp2 = np.array([225 * 0.6, 225 * 0.6, 225 * 0.6])
-        self.Ki2 = np.array([0 * 0.008, 0 * 0.008, 4 * 0.008])
-        self.Kd2 = np.array([1625 * 0.3, 1625 * 0.3, 465 * 0.3])       
-
-         # For storing previous error for derivative term
+        # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
         # For storing sum of error for integral term
         self.integral = np.array([0.0, 0.0, 0.0])
@@ -99,6 +82,9 @@ class Position():
     # Callback for GPS location
     def lidar_callback(self, msg):
         self.ranges = np.array(msg.ranges)
+    
+    def gps_callback(self, msg):
+        self.currentloc = np.array([msg.latitude, msg.longitude, msg.altitude])
 
     def lat_to_x(self, input_latitude):
         return 110692.0702932625 * (input_latitude - 19)
@@ -114,9 +100,6 @@ class Position():
         t = self.dt / d
         waypoint = np.array([((1-t)*x0 + t*x1), ((1-t)*y0 + t*y1), 25.16])
         return waypoint, t
-    
-    def gps_callback(self, msg):
-        self.currentloc = np.array([msg.latitude, msg.longitude, msg.altitude])
 
     # Function for checking limits of PID output
     def checkLimits(self, drone_command):
@@ -148,7 +131,7 @@ class Position():
 	self.integral = np.round(
             ((self.integral + self.del_error) * self.sample_time), 7)
 	output = np.round(
-            ((self.Kp2 * self.del_error) + (self.Ki2 * self.integral) + (self.Kd2 * derivative)), 7)
+            ((self.Kp * self.del_error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
 
 	throttle = self.checkLimits(1500.0 + output[2])
         pitch = self.checkLimits(1500.0 - output[1])
@@ -171,7 +154,7 @@ class Position():
             return
 
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
-            self.waypoint, self.t = self.waypoint_generator(self.setpoints[0,0], self.setpoints[0,1], self.pickuploc[0], self.pickuploc[1], 12)
+            self.waypoint, self.t = self.waypoint_generator(self.spawnloc[0], self.spawnloc[1], self.pickuploc[0], self.pickuploc[1], 12)
 
 	self.pid()
 
@@ -194,7 +177,7 @@ class Position():
     def delivery(self):
         #if (self.ranges > 3).all():
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
-            self.waypoint, self.t = self.waypoint_generator(self.setpoints[3,0], self.setpoints[3,1], self.detectedcord[0], self.detectedcord[1], 25)
+            self.waypoint, self.t = self.waypoint_generator(self.pickuploc[0], self.pickuploc[1], self.detectedcord[0], self.detectedcord[1], 25)
 
         #elif self.ranges[3] < 4:
         #    self.del_error = np.round(np.array([(2-self.ranges[3]), 1.5, (25.16-self.currentlocxy[2])]), 7)
