@@ -154,27 +154,8 @@ class Position():
         self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
             self.waypoint, self.t = self.waypoint_generator(self.setpoints[0,0], self.setpoints[0,1], self.pickuploc[0], self.pickuploc[1], 12)
-            self.prev_values = np.array([0.0, 0.0, 0.0])
 
-        if self.t == 1:
-            if self.stabilize < 60:
-                self.stabilize = self.stabilize + 1
-            elif self.detectconf is not True:
-                self.waypoint[2] = 22.86
-                print('Hovering for detection') 
-            else:
-                self.waypoint[2] = 22.16
-                self.setpoint_rpy.rcThrottle = 1000
-                self.setpoint_pub.publish(self.setpoint_rpy)
-                gripper_response = self.gripper_activate(self.gripperState)
-                print('GripperState:'+str(self.gripperState)+str(gripper_response))
-                if gripper_response.result is True:
-                        self.delivery_flag = 1
-                        self.prev_values = np.array([0,0,0])
-                        self.integral = np.array([0,0,0])
-                        self.t = 0
-
-        self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
+	self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
 
         # Calculating derivative term and rounding off
         # / symbol allows divison for sample_time scalar with every element in the array
@@ -210,15 +191,32 @@ class Position():
         self.setpoint_rpy.rcThrottle = throttle
         self.setpoint_pub.publish(self.setpoint_rpy)
 
+	if self.t == 1:
+            if abs(self.del_error[0]) > 0.1:
+                return
+            elif self.detectconf is not True:
+                self.waypoint[2] = 22.86
+                print('Hovering for detection') 
+            else:
+                self.waypoint[2] = 22.16
+                self.setpoint_rpy.rcThrottle = 1000
+                self.setpoint_pub.publish(self.setpoint_rpy)
+                gripper_response = self.gripper_activate(self.gripperState)
+                print('GripperState:'+str(self.gripperState)+str(gripper_response))
+                if gripper_response.result is True:
+                        self.delivery_flag = 1
+                        self.prev_values = np.array([0,0,0])
+                        self.integral = np.array([0,0,0])
+                        self.t = 0
+
     def delivery(self):
         if not np.any(self.currentloc):
                 return
         self.currentlocxy = np.array([self.lat_to_x(self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
         #if (self.ranges > 3).all():
-        if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 1 and self.t != 1:
+        if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
                 
             self.waypoint, self.t = self.waypoint_generator(self.setpoints[3,0], self.setpoints[3,1], self.detectedcord[0], self.detectedcord[1], 25)
-            self.prev_values = np.array([0.0, 0.0, 0.0])
         self.del_error = np.round((self.waypoint - self.currentlocxy), 7)
 
         #elif self.ranges[3] < 4:
@@ -248,6 +246,17 @@ class Position():
         self.setpoint_rpy.rcYaw = 1500
         self.setpoint_rpy.rcThrottle = throttle
         self.setpoint_pub.publish(self.setpoint_rpy)
+
+	if self.t == 1:
+            if abs(self.del_error[0]) > 0.1:
+                return
+            elif self.waypoint[2]!=self.detectedcord[2]:
+                self.waypoint[2] = self.detectedcord[2]
+	    elif abs(self.del_error[2]) < 0.1:
+		gripper_response = self.gripper_activate(False)
+		if gripper_response is not False:
+			return
+                
 
 # ------------------------------------------------------------------------------------------------------------
 
