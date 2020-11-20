@@ -29,7 +29,7 @@ class Position():
         # Numpy array for PID gains : [x, y, z] * coefficient ratio
         self.Kp = np.array([225, 225, 225]) * 0.6
         self.Ki = np.array([0, 0, 4]) * 0.008
-        self.Kd = np.array([1625, 1625, 465]) * 0.3       
+        self.Kd = np.array([1265, 1265, 465]) * 0.3       
 
         # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
