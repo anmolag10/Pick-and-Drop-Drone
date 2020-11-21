@@ -183,22 +183,20 @@ class Position():
         if not np.any(self.currentloc):
             return
 
-        if self.ranges[3] < 5 and self.ranges[3] > 0.5:
-		if self.flag == 0:
-			self.flag = 1
-			self.prev_values = np.array([0,0,0]) 
-		self.waypoint[1] = self.currentlocxy[1] - 1
-		self.waypoint[0] = self.currentlocxy[0] + (3.5 - self.ranges[3])
+        if self.ranges[3] < 5 and self.ranges[3] > 0.3:
+	    if self.flag == 0:
+	        self.flag = 1
+	    self.waypoint[1] = self.currentlocxy[1] - 1
+	    self.waypoint[0] = self.currentlocxy[0] + (3.5 - self.ranges[3])
 
-	elif self.ranges[0] < 5 and self.ranges[0] > 0.5:
+	elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
             if self.flag == 0:
                 self.flag = 1
-		self.prev_values = np.array([0,0,0])
             self.waypoint[0] = self.currentlocxy[0] - 1
 	    self.waypoint[1] = self.currentlocxy[1] - (3.5 - self.ranges[0])
         
         else:
-            if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
+            if ((abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1) or self.flag == 1) and self.t != 1:
                 if self.flag == 1:
                     self.pickuploc = self.currentloc
                     self.dt = 0
