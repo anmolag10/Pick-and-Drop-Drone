@@ -29,9 +29,9 @@ class Position():
         self.setpoint_rpy.rcThrottle = 0
 
         # Numpy array for PID gains : [x, y, z] * coefficient ratio
-        self.Kp = np.array([225, 225, 225]) * 0.6
+        self.Kp = np.array([325, 325, 225]) * 0.6
         self.Ki = np.array([0, 0, 4]) * 0.008
-        self.Kd = np.array([1265, 1265, 465]) * 0.3       
+        self.Kd = np.array([1825, 1825, 465]) * 0.3       
 
         # For storing previous error for derivative term
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -157,7 +157,7 @@ class Position():
             return
 
         if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
-            self.waypoint, self.t = self.waypoint_generator(self.spawnloc[0], self.spawnloc[1], self.pickuploc[0], self.pickuploc[1], 12)
+            self.waypoint, self.t = self.waypoint_generator(self.spawnloc[0], self.spawnloc[1], self.pickuploc[0], self.pickuploc[1], 5)
 
         self.pid()
 
@@ -183,29 +183,28 @@ class Position():
         if not np.any(self.currentloc):
             return
 
-        if self.ranges[3] < 4.5:
+        if self.ranges[3] < 5 and self.ranges[3] > 0.5:
 		if self.flag == 0:
 			self.flag = 1
 			self.prev_values = np.array([0,0,0]) 
-		self.waypoint[1] = self.currentlocxy[1] - 3
-		self.waypoint[0] = self.currentlocxy[0] + (4.5 - self.ranges[3])
-		print(4.5 - self.ranges[3])
+		self.waypoint[1] = self.currentlocxy[1] - 1
+		self.waypoint[0] = self.currentlocxy[0] + (3.5 - self.ranges[3])
 
-	elif self.ranges[0] < 4.5:
+	elif self.ranges[0] < 5 and self.ranges[0] > 0.5:
             if self.flag == 0:
                 self.flag = 1
 		self.prev_values = np.array([0,0,0])
-            self.waypoint[0] = self.currentlocxy[0] - 3
-	    self.waypoint[1] = self.currentlocxy[1] - (4.5 - self.ranges[0])
+            self.waypoint[0] = self.currentlocxy[0] - 1
+	    self.waypoint[1] = self.currentlocxy[1] - (3.5 - self.ranges[0])
         
-        elif (self.ranges > 4.5).all():
+        else:
             if abs(self.del_error[0]) < 1 and abs(self.del_error[1]) < 1 and abs(self.del_error[2]) < 0.1 and self.t != 1:
                 if self.flag == 1:
                     self.pickuploc = self.currentloc
                     self.dt = 0
                     self.t = 0
                     self.flag = 0
-                self.waypoint, self.t = self.waypoint_generator(self.pickuploc[0], self.pickuploc[1], self.detectedcord[0], self.detectedcord[1], 4)
+                self.waypoint, self.t = self.waypoint_generator(self.pickuploc[0], self.pickuploc[1], self.detectedcord[0], self.detectedcord[1], 18)
 
         self.pid()
 
@@ -214,7 +213,7 @@ class Position():
                     return
                 elif self.waypoint[2]!=self.detectedcord[2]:
                     self.waypoint[2] = self.detectedcord[2]
-                elif abs(self.del_error[2]) < 0.1:
+                elif abs(self.del_error[2]) < 0.2:
                     gripper_response = self.gripper_activate(False)
                     self.setpoint_rpy.rcThrottle = 1000
                     self.setpoint_pub.publish(self.setpoint_rpy)
