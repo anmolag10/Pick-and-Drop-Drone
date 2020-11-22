@@ -26,7 +26,7 @@ class image_proc():
         self.img = np.empty([])
         self.bridge = CvBridge()
 
-        #decoded information for the QR code
+        #Decoded information for the QR code
         self.decodedimg = ("")
 
         #Detected Coordinates to the final setpoint
