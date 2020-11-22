@@ -20,9 +20,6 @@ import time
 from vitarana_drone.srv import Gripper
 import rospy
 
-flag = 0
-flaggrip = 0
-
 
 class image_proc():
 
@@ -32,25 +29,34 @@ class image_proc():
         # Subscribing to the camera topic
         self.image_sub = rospy.Subscriber(
             "/edrone/camera/image_raw", Image, self.image_callback)
-        # This will contain your image frame from camera
-        self.detect_confirm_pub=rospy.Publisher('/detect_confirm',String,queue_size=1)
+
+        #This will contain your image frame from camera
         self.img = np.empty([])
         self.bridge = CvBridge()
+
+        #decoded information for the QR code
         self.decodedimg = ("")
+
+        #Detected Coordinates to the final setpoint
         self.setpointCordinates = [0, 0, 0]
-        self.dectection_Coordinates=String()
+        
+        #Default published message for topic /detect_confirm
         self.confirmation_msg="False,0.0,0.0,0.0"
+
+        #Publisher for detected coordinates
+        self.detect_confirm_pub=rospy.Publisher('/detect_confirm',String,queue_size=1)
+    
+    #Function to decode the QR code
     def imdecode(self):
-            global flaggrip
+            
             time.sleep(0.05)
             try:
                 self.decodedimg = decode(self.img)
                 gps = []
                 for i in self.decodedimg:
                     gps = i.data.decode("utf-8").split(',')
-                self.setpointCordinates = list(map(float, gps))
+                self.setpointCordinates = list(map(float, gps))   #Making a list of detected QR codes
                 if gps:
-                
                     print("Coordinates detected")
                     self.confirmation_msg="True,"+str(self.setpointCordinates[0])+","+str(self.setpointCordinates[1])+","+str(self.setpointCordinates[2])
                     print(self.setpointCordinates)
@@ -76,3 +82,4 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         image_proc_obj.imdecode()
         r.sleep()
+
