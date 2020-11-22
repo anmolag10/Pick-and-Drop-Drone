@@ -25,7 +25,7 @@ class image_proc():
 
     # Initialise everything
     def __init__(self):
-        rospy.init_node('barcode_test')  # Initialise rosnode
+        rospy.init_node('node_qr_detect')  # Initialise rosnode
         # Subscribing to the camera topic
         self.image_sub = rospy.Subscriber(
             "/edrone/camera/image_raw", Image, self.image_callback)
