@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 
-
-'''
-This is a boiler plate script that contains an example on how to subscribe a rostopic containing camera frames 
-and store it into an OpenCV image to use it further for image processing tasks.
-Use this code snippet in your code or you can also continue adding your code in the same file
-'''
-
-
 from time import sleep
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
