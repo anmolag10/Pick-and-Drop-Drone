@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # Importing the required libraries
-
 from vitarana_drone.msg import *
 from sensor_msgs.msg import NavSatFix, LaserScan
 from std_msgs.msg import Float32, String
@@ -9,7 +8,6 @@ import rospy
 import numpy as np
 from vitarana_drone.srv import Gripper
 import math 
-
 
 class Position():
 
@@ -275,7 +273,7 @@ class Position():
                     gripper_response = self.gripper_activate(False)
                     self.setpoint_rpy.rcThrottle = 1000
                     self.setpoint_pub.publish(self.setpoint_rpy)
-                
+               
 # ------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
