@@ -62,8 +62,8 @@ class image_proc():
         if len(logo) is not 0:
                 for (x, y, w, h) in logo:
                       cv2.rectangle(self.img, (x, y), (x + w, y + h), (255, 255, 0), 2)
-                      self.x_center = x + w/2
-                      self.y_center = y + h/2
+                      self.x_center = x + w/2 - 200
+                      self.y_center = y + h/2 - 200
 	self.confirmation_msg = "True,"+str(self.x_center)+","+str(self.y_center)
         self.detect_confirm_pub.publish(self.confirmation_msg)
 
