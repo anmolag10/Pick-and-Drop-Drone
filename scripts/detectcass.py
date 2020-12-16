@@ -63,14 +63,14 @@ class image_proc():
                 for (x, y, w, h) in logo:
                       cv2.rectangle(self.img, (x, y), (x + w, y + h), (255, 255, 0), 2)
                       self.x_center = x + w/2 - 200
-                      self.y_center = y + h/2 - 200
-	self.confirmation_msg = "True,"+str(self.x_center)+","+str(self.y_center)
-        self.detect_confirm_pub.publish(self.confirmation_msg)
+                      self.y_center = 200 - (y + h/2) 
 
     def error_finder(self):
         focal_length=(200)/math.tan(1.3962634/2)
         self.x_err=self.x_center*self.z_m/focal_length
         self.y_err=self.y_center*self.z_m/focal_length
+	self.confirmation_msg = "True,"+str(self.x_err)+","+str(self.y_err)
+        self.detect_confirm_pub.publish(self.confirmation_msg)
 	print(self.x_err, self.y_err)
         self.x_pub.publish(self.x_err)
         self.y_pub.publish(self.y_err)
