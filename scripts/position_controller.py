@@ -247,7 +247,7 @@ class Position():
             else:
                 self.waypoint[2] = self.pickuploc[2]
 
-	    if self.detectconf is True:
+	    if self.detectconf is True and self.detectedcoord[0] != 0.0:
 		self.waypoint[0] = self.currentlocxy[0] + self.detectedcoord[0]
 		self.waypoint[1] = self.currentlocxy[1] + self.detectedcoord[1]
 		self.delivery_flag = 1
@@ -306,16 +306,10 @@ class Position():
 
         # Call PID function for publishing control commands
 
-	if abs(
-            self.error[0]) < 0.1 and abs(
-            self.error[1]) < 0.1 and abs(
-                self.error[2]) < 0.1:
-		self.setpoint_rpy.rcThrottle = 1000
-        	self.setpoint_pub.publish(self.setpoint_rpy)
-
-	print("lol")
-
         self.pid()
+
+	if abs(self.error[0]) < 0.01 and abs(self.error[1]) < 0.01 and abs(self.error[2]) < 0.1:
+		self.waypoint[2] = 11 
 
 
 # ------------------------------------------------------------------------------------------------------------
