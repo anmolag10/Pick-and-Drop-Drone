@@ -110,7 +110,6 @@ class Position():
         x=self.lat_to_x(self.currentloc[0])
         y=self.long_to_y(self.currentloc[1])
         msg=str(x)+','+str(y)
-        print(msg)
         self.currxypub.publish(msg)
 
 
@@ -153,9 +152,8 @@ class Position():
         strdata = data.data.split(',')
         if strdata[0] == 'True':
             self.detectconf = True
-        self.detectedcoord[0] = strdata[1]
-        self.detectedcoord[1] = strdata[2]
-        self.detectedcoord[2] = strdata[3]
+        self.detectedcoord[0] = float(strdata[1])
+        self.detectedcoord[1] = float(strdata[2])
 
     # Callback for gripper state
     def checkGripper(self, data):
@@ -249,6 +247,11 @@ class Position():
             else:
                 self.waypoint[2] = self.pickuploc[2]
 
+	    if self.detectconf is True:
+		self.waypoint[0] = self.currentlocxy[0] + self.detectedcoord[0]
+		self.waypoint[1] = self.currentlocxy[1] + self.detectedcoord[1]
+		self.delivery_flag = 1
+
     # Function for delivery state with left wall following bug
     def delivery(self):
         # If obstacle detcted by left laser, set avoid flag
@@ -302,6 +305,16 @@ class Position():
                 # Generating waypoints to final goal with step size 18
 
         # Call PID function for publishing control commands
+
+	if abs(
+            self.error[0]) < 0.1 and abs(
+            self.error[1]) < 0.1 and abs(
+                self.error[2]) < 0.1:
+		self.setpoint_rpy.rcThrottle = 1000
+        	self.setpoint_pub.publish(self.setpoint_rpy)
+
+	print("lol")
+
         self.pid()
 
 
