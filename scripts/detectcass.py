@@ -37,6 +37,7 @@ class image_proc():
         self.y_quad=0
         self.z_m=0
         self.lat= 0
+	self.logo = ()
         self.confirmation_msg = "False,0.0,0.0"
         self.detect_confirm_pub = rospy.Publisher(
             '/detect_confirm', String, queue_size=1)
@@ -57,18 +58,18 @@ class image_proc():
         self.logo_cascade = cv2.CascadeClassifier('/home/rohan/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
         time.sleep(0.05)
         
-        logo = self.logo_cascade.detectMultiScale(self.gray, scaleFactor=1.05)
-            
-        if len(logo) is not 0:
-                for (x, y, w, h) in logo:
-                      cv2.rectangle(self.img, (x, y), (x + w, y + h), (255, 255, 0), 2)
-                      self.x_center = x + w/2 - 200
-                      self.y_center = 200 - (y + h/2) 
+	if self.gray.size == 160000:
+		self.logo = self.logo_cascade.detectMultiScale(self.gray, scaleFactor = 1.06) 
+		if len(self.logo) is not 0:
+		        for (x, y, w, h) in self.logo:
+		              cv2.rectangle(self.img, (x, y), (x + w, y + h), (255, 255, 0), 2)
+		              self.x_center = x + w/2 - 200
+		              self.y_center = 200 - (y + h/2)
 
     def error_finder(self):
-        focal_length=(200)/math.tan(1.3962634/2)
-        self.x_err=self.x_center*self.z_m/focal_length
-        self.y_err=self.y_center*self.z_m/focal_length
+        focal_length = (200)/math.tan(1.3962634/2)
+        self.x_err = self.x_center*self.z_m/focal_length
+        self.y_err = self.y_center*self.z_m/focal_length
 	self.confirmation_msg = "True,"+str(self.x_err)+","+str(self.y_err)
         self.detect_confirm_pub.publish(self.confirmation_msg)
 	print(self.x_err, self.y_err)
@@ -83,10 +84,6 @@ class image_proc():
         except CvBridgeError as e:
             print(e)
             return
-        plt.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
-	plt.show()
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
