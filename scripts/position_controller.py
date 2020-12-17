@@ -22,7 +22,7 @@ class Position():
         # Location at which the drone spawns
         self.spawnloc = np.array([0, 0, 0])
         # Location of package to pickup
-        self.pickuploc = np.array([ 18.9993519143, 71.9999596843, 12.8722413521])
+        self.pickuploc = np.array([18.999052784, 72.0001202066, 14.8722413521])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -309,7 +309,10 @@ class Position():
         self.pid()
 
 	if abs(self.error[0]) < 0.01 and abs(self.error[1]) < 0.01 and abs(self.error[2]) < 0.1:
-		self.waypoint[2] = 11 
+		self.waypoint[2] = 10
+		self.setpoint_rpy.rcThrottle = 1000
+        	self.setpoint_pub.publish(self.setpoint_rpy)
+		
 
 
 # ------------------------------------------------------------------------------------------------------------
