@@ -81,6 +81,7 @@ class Position():
 		# Subscribers
 		rospy.Subscriber('/edrone/gps', NavSatFix, self.gps_callback)
 		rospy.Subscriber('/edrone/range_finder_top',LaserScan, self.laser_callback)
+		rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
 		# ------------------------------------------------------------------------------------------------------------
 
 	# Callback for Laser sensor ranges
@@ -142,7 +143,7 @@ class Position():
 		self.iterator += 1
 
 		if self.counter == 0:
-			self.waypoint[2] = self.pickuploc[2] + 5
+			self.waypoint[2] = self.pickuploc[2] + 6
 		if self.counter % 4 == 0:
 			self.waypoint[1] = self.currentlocxy[1] + self.side
 			print("move up {}m".format(self.side))
@@ -197,29 +198,23 @@ class Position():
 		if abs(self.error[0]) < 1 and abs(self.error[1]) < 1 and abs(self.error[2]) < 0.1 and self.t != 1:
 			self.waypoint = self.waypoint_generator(self.spawnloc[0], self.spawnloc[1], self.pickuploc[0], self.pickuploc[1], 5)
 
-		# Call PID function for publishing control commands
-
-		elif abs(self.error[0]) > 0.1 and abs(self.error[1]) > 0.1 and abs(self.error[2]) > 0.1 and self.t == 1:
-			pass
+		self.pid()
 
 		# self.t == 1 implies that the current setpoint is the final goal
-		elif self.t == 1:
-			if abs(self.waypoint[2] - 25.16) < 0.1:
-				self.waypoint[2] = self.pickuploc[2]
-			elif abs(self.error[0]) > 0.1 and abs(self.error[1]) > 0.1 and abs(self.error[2]) > 0.1:
+		if self.t == 1:
+			if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
 				return
+			elif self.waypoint[2] == 25.16:
+				self.waypoint[2] = self.pickuploc[2]
 			# Hover 0.7 m above until coordinates on box are detected
 			elif abs(self.error[2]) < 0.1:
 				self.detectconf = False
 				self.detectedcoord = [0,"0.0","0.0"]
 				self.start_detection_flag = 1
-
-		self.pid()
 		
 
 	def detection(self):
 		if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)) and self.detectconf is False:
-			rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
 			self.Search_pattern()
 
 		elif self.detectconf is True and self.detection_flag == 0 and self.detectedcoord[1]!="inf" and self.detectedcoord[1]!="-inf" and self.detectedcoord[1]!='0.0':
@@ -232,12 +227,12 @@ class Position():
 			print(1)
 			self.t = 0
 			self.dt = 0
-			self.detectconf = False
+			self.detection_flag = 0
 			self.spawnloc = self.currentloc
 			self.pickuploc = np.array([18.9990965925, 71.9999050292, 23.2])
 			self.start_detection_flag = 0
 			self.counter = 0
-			self.side = 3
+			self.side = 0
 
 		self.pid()
 # ------------------------------------------------------------------------------------------------------------
