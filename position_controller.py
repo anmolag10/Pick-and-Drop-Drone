@@ -13,21 +13,6 @@ import time
 class Position():
 
 	def __init__(self):
-		# initializing ros node with name position_controll#!/usr/bin/env python
-
-# Importing the required libraries
-from vitarana_drone.msg import *
-from sensor_msgs.msg import NavSatFix, LaserScan
-from std_msgs.msg import Float32, String
-import rospy
-import numpy as np
-from vitarana_drone.srv import Gripper
-import math
-import time
-
-class Position():
-
-	def __init__(self):
 		# initializing ros node with name position_controller
 		rospy.init_node('node_position_controller')
 
@@ -86,6 +71,7 @@ class Position():
 
 		# Subscribers
 		rospy.Subscriber('/edrone/gps', NavSatFix, self.gps_callback)
+		rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
 		# ------------------------------------------------------------------------------------------------------------
 
 	# Callback for Laser sensor ranges
@@ -123,11 +109,11 @@ class Position():
 
 	def Search_pattern(self):
 		if(self.iterator % 2 == 0):
-			self.side += 5
+			self.side += 4
 		self.iterator += 1
 
 		if self.counter == 0:
-			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 4
+			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 5
 		if self.counter % 4 == 0:
 			self.waypoint[1] = self.currentlocxy[1] + self.side
 			print("move up {}m".format(self.side))
@@ -193,32 +179,36 @@ class Position():
 				self.detectconf = False
 				self.detectedcoord = [0,"0","0"]
 				self.start_detection_flag = 1
-				self.detection_flag = 0
-
 		
 	def detection(self):
-		print(self.detectconf, self.detection_flag, self.detectedcoord[1])
 		if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)) and self.detectconf is False:
 			self.Search_pattern()
-			rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
-
-		elif ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)):
-			if self.building_flag == 2:
-				self.waypoint[2] = self.pickuploc[self.building_flag][2] - 1
-				self.pid()
-				return
-			self.detection_flag = 0
 			self.flag = 0
-			self.start_detection_flag = 0
-			self.counter = 0
-			self.side = 10
-			self.building_flag += 1
-			self.waypoint[2] = 26
 
 		elif self.detectconf is True and self.detection_flag == 0 and self.detectedcoord[1]!="inf" and self.detectedcoord[1]!="-inf" and self.detectedcoord[1]!='0.0':
 			self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1])
 			self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2])
 			self.detection_flag = 1
+
+		elif ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)):
+			if self.flag == 0:
+				self.detection_flag = 0
+				self.flag = 1
+				return
+			elif self.building_flag == 2:
+				self.waypoint[2] = self.pickuploc[self.building_flag][2] - 1
+				self.pid()
+				return
+			self.detection_flag = 0
+			self.flag = 0
+			self.flag = 0
+			self.start_detection_flag = 0
+			self.counter = 0
+			self.side = 4
+			self.building_flag += 1
+			self.waypoint[2] = 26
+			
+				
 
 		self.pid()
 # ------------------------------------------------------------------------------------------------------------
