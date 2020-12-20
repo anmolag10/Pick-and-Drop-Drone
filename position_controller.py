@@ -16,10 +16,8 @@ class Position():
 		# initializing ros node with name position_controller
 		rospy.init_node('node_position_controller')
 
-		# Location at which the drone spawns
-		self.spawnloc = np.array([0, 0, 0])
 		# Location of package to pickup
-		self.pickuploc = np.array([18.9990965928,72.0000664814, 11.75])
+		self.pickuploc = np.array([[18.9990965928,72.0000664814, 11.75], [18.9990965925, 71.9999050292, 23.2], [18.9993675932, 72.0000569892, 11.7]])
 		# Numpy array for current GPS location
 		self.currentloc = np.array([0.0, 0.0, 0.0])
 		# Current Location of drone in XYZ coordinate system
@@ -34,11 +32,13 @@ class Position():
 		self.side = 0
 		self.iterator = 0
 		self.counter = 0
+		self.building_flag = 0
+		self.flag = 0
 
 		# Numpy array for PID gains : [x, y, z] * coefficient ratio
 		self.Kp = np.array([325, 325, 225]) * 0.6
 		self.Ki = np.array([0, 0, 4]) * 0.008
-		self.Kd = np.array([1825, 1825, 465]) * 0.3
+		self.Kd = np.array([1425, 1425, 435]) * 0.3
 
 		# For storing error term for PID
 		self.error = np.array([0, 0, 0])
@@ -60,19 +60,10 @@ class Position():
 		self.start_detection_flag = 0
 		self.detection_flag = 0
 		# Waypoint for trajectory
-		self.waypoint = np.array([0, 0, 0])
-		# Other variables needed to generate waypoints
-		self.dt = 0
-		self.t = 0
-		self.flag=0
+		self.waypoint = np.array([0,0,0])
 
 		# Detected coordinate from QR code
 		self.detectedcoord = [0.0, "0.0", "0.0"]
-		# Ranges from range finder top
-		self.ranges = np.array([26, 26, 26, 26, 26])
-
-		# To check gripper state from callback
-		self.gripperState = False
 
 		# Publishing /edrone/drone_command
 		self.setpoint_pub = rospy.Publisher(
@@ -80,7 +71,6 @@ class Position():
 
 		# Subscribers
 		rospy.Subscriber('/edrone/gps', NavSatFix, self.gps_callback)
-		rospy.Subscriber('/edrone/range_finder_top',LaserScan, self.laser_callback)
 		rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
 		# ------------------------------------------------------------------------------------------------------------
 
@@ -90,9 +80,6 @@ class Position():
 
 	# Callback for GPS location
 	def gps_callback(self, msg):
-		if self.flag==0 and (msg.latitude is not 0):
-			self.spawnloc =  np.array([msg.latitude, msg.longitude, msg.altitude])
-			self.flag=1
 		self.currentloc = np.array([msg.latitude, msg.longitude, msg.altitude])
 
 	# For convering latitude to X coordinate
@@ -102,23 +89,6 @@ class Position():
 	# For converting longitude to Y coordinate
 	def long_to_y(self, input_longitude):
 		return -105292.0089353767 * (input_longitude - 72)
-
-	# For generating waypoints between (lat1, long1) and (lat2, long2)
-	# dist is the distance between waypoints / step size
-	def waypoint_generator(self, lat1, lon1, lat2, lon2, dist):
-		x0, y0 = self.lat_to_x(lat1), self.long_to_y(lon1)
-		x1, y1 = self.lat_to_x(lat2), self.long_to_y(lon2)
-		# Distance between coordinates
-		d = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)
-		# Distance of next waypoint from (lat1, long1)
-		self.dt = self.dt + dist if (self.dt + dist) < d else d
-		# Ratio of waypoint distance to total distance (is equal to 1 when at
-		# final goal)
-		self.t = self.dt / d
-		# Waypoint [x,y,z], z = 25.16 which is 3 m above the spawn location
-		waypoint = np.array(
-			[((1 - self.t) * x0 + self.t * x1), ((1 - self.t) * y0 + self.t * y1), 25.16])
-		return waypoint
 
 	# Function for checking limits of PID output
 	def checkLimits(self, drone_command):
@@ -139,11 +109,11 @@ class Position():
 
 	def Search_pattern(self):
 		if(self.iterator % 2 == 0):
-			self.side += 3
+			self.side += 4
 		self.iterator += 1
 
 		if self.counter == 0:
-			self.waypoint[2] = self.pickuploc[2] + 6
+			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 5
 		if self.counter % 4 == 0:
 			self.waypoint[1] = self.currentlocxy[1] + self.side
 			print("move up {}m".format(self.side))
@@ -194,45 +164,45 @@ class Position():
 		if not np.any(self.currentloc):
 			return
 
-
-		if abs(self.error[0]) < 1 and abs(self.error[1]) < 1 and abs(self.error[2]) < 0.1 and self.t != 1:
-			self.waypoint = self.waypoint_generator(self.spawnloc[0], self.spawnloc[1], self.pickuploc[0], self.pickuploc[1], 5)
+		if self.flag == 0:
+			self.waypoint[0] = self.lat_to_x(self.pickuploc[self.building_flag][0])
+			self.waypoint[1] = self.long_to_y(self.pickuploc[self.building_flag][1])
+			self.waypoint[2] = 26
+			self.flag = 1
 
 		self.pid()
 
-		# self.t == 1 implies that the current setpoint is the final goal
-		if self.t == 1:
-			if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
-				return
-			elif self.waypoint[2] == 25.16:
-				self.waypoint[2] = self.pickuploc[2]
-			# Hover 0.7 m above until coordinates on box are detected
+		if abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1:
+			if self.waypoint[2] == 26:
+				self.waypoint[2] = self.pickuploc[self.building_flag][2]
 			elif abs(self.error[2]) < 0.1:
 				self.detectconf = False
-				self.detectedcoord = [0,"0.0","0.0"]
+				self.detectedcoord = [0,"0","0"]
 				self.start_detection_flag = 1
 		
-
 	def detection(self):
 		if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)) and self.detectconf is False:
 			self.Search_pattern()
 
 		elif self.detectconf is True and self.detection_flag == 0 and self.detectedcoord[1]!="inf" and self.detectedcoord[1]!="-inf" and self.detectedcoord[1]!='0.0':
-			print(self.detectedcoord)
 			self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1])
 			self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2])
 			self.detection_flag = 1
 
 		elif ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)):
-			print(1)
-			self.t = 0
-			self.dt = 0
+			if self.building_flag == 2:
+				self.waypoint[2] = self.pickuploc[self.building_flag][2] - 1
+				self.pid()
+				return
 			self.detection_flag = 0
-			self.spawnloc = self.currentloc
-			self.pickuploc = np.array([18.9990965925, 71.9999050292, 23.2])
+			self.flag = 0
 			self.start_detection_flag = 0
 			self.counter = 0
-			self.side = 0
+			self.side = 4
+			self.building_flag += 1
+			self.waypoint[2] = 26
+			
+				
 
 		self.pid()
 # ------------------------------------------------------------------------------------------------------------
