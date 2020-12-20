@@ -55,7 +55,7 @@ class image_proc():
     
     def imdecode(self):
         global flag
-        self.logo_cascade = cv2.CascadeClassifier(r'/home/blebot/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
+        self.logo_cascade = cv2.CascadeClassifier('/home/blebot/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
         time.sleep(0.05)
         
         if self.gray.size == 160000:
