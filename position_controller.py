@@ -109,7 +109,7 @@ class Position():
 
 	def Search_pattern(self):
 		if(self.iterator % 2 == 0):
-			self.side += 4
+			self.side += 5
 		self.iterator += 1
 
 		if self.counter == 0:
@@ -204,7 +204,7 @@ class Position():
 			self.flag = 0
 			self.start_detection_flag = 0
 			self.counter = 0
-			self.side = 4
+			self.side = 5
 			self.building_flag += 1
 			self.waypoint[2] = 26
 			
