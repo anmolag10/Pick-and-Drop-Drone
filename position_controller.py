@@ -113,19 +113,23 @@ class Position():
 		self.iterator += 1
 
 		if self.counter == 0:
-			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 5
-		if self.counter % 4 == 0:
-			self.waypoint[1] = self.currentlocxy[1] + self.side
-			print("move up {}m".format(self.side))
-		elif self.counter % 4 == 1:
-			self.waypoint[0] = self.currentlocxy[0] + self.side
-			print("move right {}m".format(self.side))
-		elif self.counter % 4 == 2:
-			self.waypoint[1] = self.currentlocxy[1] - self.side
-			print("move down {}m".format(self.side))
-		elif self.counter % 4 == 3:
+			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 10
+		
+		elif self.counter % 4 == 0:
 			self.waypoint[0] = self.currentlocxy[0] - self.side
 			print("move left {}m".format(self.side))
+		elif self.counter % 4 == 1:
+			self.waypoint[1] = self.currentlocxy[1] + self.side
+			print("move up {}m".format(self.side))
+			
+		elif self.counter % 4 == 2:
+			self.waypoint[0] = self.currentlocxy[0] + self.side
+			print("move right {}m".format(self.side))
+			
+		elif self.counter % 4 == 3:
+			self.waypoint[1] = self.currentlocxy[1] - self.side
+			print("move down {}m".format(self.side))
+			
 		self.counter += 1
 
 
