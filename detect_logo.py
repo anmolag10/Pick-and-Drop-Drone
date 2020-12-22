@@ -17,22 +17,33 @@ class image_proc():
         rospy.init_node('node_qr_detect')  # Initialise rosnode
         # Subscribing to the camera topic
         rospy.Subscriber("/edrone/camera/image_raw", Image, self.image_callback)
+	# Subscribing to bottom range finder
         rospy.Subscriber('/edrone/range_finder_bottom', LaserScan, self.globalheight)
+	# Subscring to marker_related
 	rospy.Subscriber('/marker_related', String, self.marker_info)
 
         # This will contain your image frame from camera
         self.img = np.empty([])
         self.bridge = CvBridge()
         self.gray = np.empty([])
+	# x,y coordinate of centeral pixel
         self.x_center = 0
         self.y_center = 0
+	# x,y value of the calculated error using
+	# Values from centeral pixel
 	self.x_error = 0
 	self.y_error = 0
+	# Marker id for the detected marker
 	self.curr_marker_id = 0
+	# Calculating focal length of the camera
 	self.focal_length = (200)/math.tan(1.3962634/2)
+	# Global height
         self.z_m=0
         self.logo = ()
+	# Confirmation message for detection of the logo
         self.confirmation_msg = "False,0.0,0.0"
+	# Publisers for confirmation of detection,
+	# x_err, y_err and current marker id
         self.detect_confirm_pub = rospy.Publisher(
             '/detect_confirm', String, queue_size=1)
 	self.x_err_pub = rospy.Publisher(
@@ -41,8 +52,9 @@ class image_proc():
 			'/edrone/err_y_m', Float32, queue_size=1)
 	self.curr_marker_pub = rospy.Publisher(
 			'/edrone/curr_marker_id', Int32, queue_size=1)
-    # Function to decode the QR code
+   
 
+    # Callback for marker info
     def marker_info(self, data):
 	strdata = data.data.split(',')
 	self.curr_marker_id = int(strdata[1])
@@ -52,11 +64,12 @@ class image_proc():
 	else:
 		self.x_error = float("NaN")
 		self.y_error = float("NaN")
-
+    # Callback for global height z_m
     def globalheight(self, msg):
         self.z_m=msg.ranges[0]
-    
-    def imdecode(self, event):
+	
+    # Function for detection and getting centeral pixel from the logo 
+    def detectlogo(self, event):
         global flag
         self.logo_cascade = cv2.CascadeClassifier('/home/rohan/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
         sleep(0.05)
@@ -65,31 +78,37 @@ class image_proc():
             self.logo = self.logo_cascade.detectMultiScale(self.gray, scaleFactor = 1.1) 
             if len(self.logo) is not 0:
                 for (x, y, w, h) in self.logo:
+		      # Printing rectangle over the detect logo for
+		      # Debugging and visualisation
                       self.img=cv2.rectangle(self.img, (x, y), (x + w, y + h), (255, 255, 0), 2)
+		      # Calculating centeral pixels for the detected logo
                       self.x_center = x + w/2 - 200
                       self.y_center = 200 - (y + h/2)
-            
+         
         cv2.imshow('img',self.img)
         if cv2.waitKey(1) & 0XFF == ord('q'):
             cv2.destroyAllWindows()
     
-
+   # Function to calculate the x_err and y_err
     def error_finder(self, event):
         if len(self.logo) is not 0:
             x = self.x_center*self.z_m/self.focal_length
             y = self.y_center*self.z_m/self.focal_length
+	    # Publishing the confirmation message for the detection
             self.confirmation_msg = "True,"+str(x)+","+str(y)
             self.detect_confirm_pub.publish(self.confirmation_msg)
 
         else:
             self.confirmation_msg = "False,"+str(0.0)+","+str(0.0)
             self.detect_confirm_pub.publish(self.confirmation_msg)
-
+		
+    # Function to publish x_err, y_err and curr_marker_id
     def publish_slow(self, event):
 	self.x_err_pub.publish(self.x_error)
 	self.y_err_pub.publish(self.y_error)
 	self.curr_marker_pub.publish(self.curr_marker_id)
-            
+     
+   # Callback for image data from the camera
     def image_callback(self, data):
         try:
             # Converting the image to OpenCV standard image
@@ -101,7 +120,9 @@ class image_proc():
 
 if __name__ == '__main__':
     img = image_proc()
-    rospy.Timer(rospy.Duration(1.0 / 30.0), img.error_finder)
-    rospy.Timer(rospy.Duration(1.0 / 30.0), img.imdecode)
-    rospy.Timer(rospy.Duration(1.0 / 1.0), img.publish_slow)
+
+    # Using ros timer to publish at different frequencies in same node
+    rospy.Timer(rospy.Duration(1.0 / 30.0), img.error_finder)   #Frequecy = 30 Hz
+    rospy.Timer(rospy.Duration(1.0 / 30.0), img.detectlogo)     #Frequecy = 30 Hz      
+    rospy.Timer(rospy.Duration(1.0 / 1.0), img.publish_slow)    #Frequecy = 1 Hz
     rospy.spin()
