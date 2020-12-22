@@ -1,21 +1,14 @@
 #!/usr/bin/env python
 
 from time import sleep
-from sensor_msgs.msg import Image, NavSatFix, LaserScan
-from std_msgs.msg import String, Float32
+from sensor_msgs.msg import Image, LaserScan
+from std_msgs.msg import String, Float32, Int32
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
 import rospy
-from pyzbar.pyzbar import decode
-import time
-from vitarana_drone.srv import Gripper
-import rospy
-import matplotlib.pyplot as plt
 import math
 
-
-x= time.time()
 flag = 0
 class image_proc():
 
@@ -24,8 +17,8 @@ class image_proc():
         rospy.init_node('node_qr_detect')  # Initialise rosnode
         # Subscribing to the camera topic
         rospy.Subscriber("/edrone/camera/image_raw", Image, self.image_callback)
-        rospy.Subscriber('/quadxy',String, self.quadxy)
         rospy.Subscriber('/edrone/range_finder_bottom', LaserScan, self.globalheight)
+	rospy.Subscriber('/marker_related', String, self.marker_info)
 
         # This will contain your image frame from camera
         self.img = np.empty([])
@@ -33,32 +26,40 @@ class image_proc():
         self.gray = np.empty([])
         self.x_center = 0
         self.y_center = 0
-        self.x_err = 0
-        self.y_err = 0
-        self.x_quad=0
-        self.y_quad=0
+	self.x_error = 0
+	self.y_error = 0
+	self.curr_marker_id = 0
+	self.focal_length = (200)/math.tan(1.3962634/2)
         self.z_m=0
-        self.lat= 0
         self.logo = ()
         self.confirmation_msg = "False,0.0,0.0"
         self.detect_confirm_pub = rospy.Publisher(
             '/detect_confirm', String, queue_size=1)
-        self.x_pub=rospy.Publisher('/edrone/err_x_m',Float32,queue_size=1)
-        self.y_pub=rospy.Publisher('/edrone/err_y_m',Float32,queue_size=1)
+	self.x_err_pub = rospy.Publisher(
+			'/edrone/err_x_m', Float32, queue_size=1)
+	self.y_err_pub = rospy.Publisher(
+			'/edrone/err_y_m', Float32, queue_size=1)
+	self.curr_marker_pub = rospy.Publisher(
+			'/edrone/curr_marker_id', Int32, queue_size=1)
     # Function to decode the QR code
 
-    def quadxy(self,msg):
-       msgstr=msg.data.split(',')
-       self.x_quad=float(msgstr[0])
-       self.y_quad=float(msgstr[1])
+    def marker_info(self, data):
+	strdata = data.data.split(',')
+	self.curr_marker_id = int(strdata[1])
+	if strdata[0] == 'True' :
+		self.x_error = float(strdata[2])
+		self.y_error = float(strdata[3])
+	else:
+		self.x_error = float("NaN")
+		self.y_error = float("NaN")
 
     def globalheight(self, msg):
         self.z_m=msg.ranges[0]
     
-    def imdecode(self):
+    def imdecode(self, event):
         global flag
-        self.logo_cascade = cv2.CascadeClassifier('/home/blebot/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
-        time.sleep(0.05)
+        self.logo_cascade = cv2.CascadeClassifier('/home/rohan/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
+        sleep(0.05)
         
         if self.gray.size == 160000:
             self.logo = self.logo_cascade.detectMultiScale(self.gray, scaleFactor = 1.1) 
@@ -73,24 +74,22 @@ class image_proc():
             cv2.destroyAllWindows()
     
 
-    def error_finder(self):
+    def error_finder(self, event):
         if len(self.logo) is not 0:
-            focal_length = (200)/math.tan(1.3962634/2)
-            self.x_err = self.x_center*self.z_m/focal_length
-            self.y_err = self.y_center*self.z_m/focal_length
-            self.confirmation_msg = "True,"+str(self.x_err)+","+str(self.y_err)
+            x = self.x_center*self.z_m/self.focal_length
+            y = self.y_center*self.z_m/self.focal_length
+            self.confirmation_msg = "True,"+str(x)+","+str(y)
             self.detect_confirm_pub.publish(self.confirmation_msg)
-
 
         else:
-            self.confirmation_msg = "False,"+str(self.x_err)+","+str(self.y_err)
+            self.confirmation_msg = "False,"+str(0.0)+","+str(0.0)
             self.detect_confirm_pub.publish(self.confirmation_msg)
-            
-    def error_publisher(self):
-        if len(self.logo) is not 0:
-            self.x_pub.publish(self.x_err)
-            self.y_pub.publish(self.y_err)
 
+    def publish_slow(self, event):
+	self.x_err_pub.publish(self.x_error)
+	self.y_err_pub.publish(self.y_error)
+	self.curr_marker_pub.publish(self.curr_marker_id)
+            
     def image_callback(self, data):
         try:
             # Converting the image to OpenCV standard image
@@ -101,14 +100,8 @@ class image_proc():
             return
 
 if __name__ == '__main__':
-    image_proc_obj = image_proc()
-    r = rospy.Rate(30)
-    while not rospy.is_shutdown():
-        y = time.time()
-        if y-x > 1:
-            image_proc_obj.error_publisher()
-            x = time.time()
-            
-        image_proc_obj.error_finder()
-        image_proc_obj.imdecode()
-        r.sleep()
+    img = image_proc()
+    rospy.Timer(rospy.Duration(1.0 / 30.0), img.error_finder)
+    rospy.Timer(rospy.Duration(1.0 / 30.0), img.imdecode)
+    rospy.Timer(rospy.Duration(1.0 / 1.0), img.publish_slow)
+    rospy.spin()
