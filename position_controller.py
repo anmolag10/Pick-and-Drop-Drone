@@ -28,6 +28,8 @@ class Position():
 		self.setpoint_rpy.rcPitch = 0
 		self.setpoint_rpy.rcYaw = 0
 		self.setpoint_rpy.rcThrottle = 0
+		self.x_error = 0
+		self.y_error = 0
 
 		self.side = 0
 		self.iterator = 0
@@ -38,7 +40,7 @@ class Position():
 		# Numpy array for PID gains : [x, y, z] * coefficient ratio
 		self.Kp = np.array([325, 325, 225]) * 0.6
 		self.Ki = np.array([0, 0, 4]) * 0.008
-		self.Kd = np.array([1425, 1425, 435]) * 0.3
+		self.Kd = np.array([1625, 1625, 465]) * 0.3
 
 		# For storing error term for PID
 		self.error = np.array([0, 0, 0])
@@ -68,6 +70,8 @@ class Position():
 		# Publishing /edrone/drone_command
 		self.setpoint_pub = rospy.Publisher(
 			'/edrone/drone_command', edrone_cmd, queue_size=1)
+		self.marker_related_pub = rospy.Publisher(
+			'/marker_related', String, queue_size=1)
 
 		# Subscribers
 		rospy.Subscriber('/edrone/gps', NavSatFix, self.gps_callback)
@@ -132,7 +136,6 @@ class Position():
 			
 		self.counter += 1
 
-
 	# Function for PID control
 	def pid(self):
 		# Calculating XYZ coordinates
@@ -192,6 +195,7 @@ class Position():
 		elif self.detectconf is True and self.detection_flag == 0 and self.detectedcoord[1]!="inf" and self.detectedcoord[1]!="-inf" and self.detectedcoord[1]!='0.0':
 			self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1])
 			self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2])
+			self.waypoint[2] = self.pickuploc[self.building_flag][2] + 5
 			self.detection_flag = 1
 
 		elif ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)):
@@ -211,22 +215,28 @@ class Position():
 			self.side = 5
 			self.building_flag += 1
 			self.waypoint[2] = 26
-			
-				
 
 		self.pid()
+
+		if self.detection_flag == 1:
+			self.marker_related_pub.publish("True,"+str(self.building_flag+1)+","+str(self.error[0])+","+str(self.error[1]))
+		else:
+			self.marker_related_pub.publish("False,"+str(self.building_flag+1))
 # ------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-	e_drone_position = Position()
+	pos = Position()
 	# Defining rospy rate such that PID algorithm loops at the
 	# desired sampling rate
-	r = rospy.Rate(e_drone_position.sample_rate)
+	# Call pickup function if delivery flag is 0 else call delivery
+	# function
+	r = rospy.Rate(pos.sample_rate)
 	while not rospy.is_shutdown():
 		# Call pickup function if delivery flag is 0 else call delivery
 		# function
-		if e_drone_position.start_detection_flag == 0:
-			e_drone_position.pickup()
+		if pos.start_detection_flag == 0:
+			pos.pickup()
 		else:
-			e_drone_position.detection()
+			pos.detection()			
+
 		r.sleep()
