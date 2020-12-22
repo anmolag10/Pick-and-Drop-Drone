@@ -14,6 +14,8 @@ import rospy
 import matplotlib.pyplot as plt
 import math
 
+
+x= time.time()
 flag = 0
 class image_proc():
 
@@ -78,14 +80,16 @@ class image_proc():
             self.y_err = self.y_center*self.z_m/focal_length
             self.confirmation_msg = "True,"+str(self.x_err)+","+str(self.y_err)
             self.detect_confirm_pub.publish(self.confirmation_msg)
-            self.x_pub.publish(self.x_err)
-            self.y_pub.publish(self.y_err)
+
 
         else:
             self.confirmation_msg = "False,"+str(self.x_err)+","+str(self.y_err)
             self.detect_confirm_pub.publish(self.confirmation_msg)
             
-
+    def error_publisher(self):
+        if len(self.logo) is not 0:
+            self.x_pub.publish(self.x_err)
+            self.y_pub.publish(self.y_err)
 
     def image_callback(self, data):
         try:
@@ -100,6 +104,11 @@ if __name__ == '__main__':
     image_proc_obj = image_proc()
     r = rospy.Rate(30)
     while not rospy.is_shutdown():
+        y = time.time()
+        if y-x > 1:
+            image_proc_obj.error_publisher()
+            x = time.time()
+            
         image_proc_obj.error_finder()
         image_proc_obj.imdecode()
         r.sleep()
