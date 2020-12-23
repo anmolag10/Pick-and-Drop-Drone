@@ -57,11 +57,6 @@ class image_proc():
 	    self.curr_marker_id = int(strdata[1])
             self.x_error = float(strdata[2])
             self.y_error = float(strdata[3])
-	# Publishing nan for error when not detected
-        else:
-	    self.curr_marker_id = 0
-            self.x_error = float("NaN")
-            self.y_error = float("NaN")
 			
     # Callback for borrom range sensor
     def globalheight(self, msg):
