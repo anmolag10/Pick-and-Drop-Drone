@@ -56,14 +56,14 @@ class image_proc():
 
     # Callback for marker info
     def marker_info(self, data):
-	strdata = data.data.split(',')
-	self.curr_marker_id = int(strdata[1])
-	if strdata[0] == 'True' :
-		self.x_error = float(strdata[2])
-		self.y_error = float(strdata[3])
-	else:
-		self.x_error = float("NaN")
-		self.y_error = float("NaN")
+        strdata = data.data.split(',')
+        self.curr_marker_id = int(strdata[1])
+        if strdata[0] == 'True' :
+            self.x_error = float(strdata[2])
+            self.y_error = float(strdata[3])
+        else:
+            self.x_error = float("NaN")
+            self.y_error = float("NaN")
 			
     # Callback for borrom range sensor
     def globalheight(self, msg):
@@ -115,9 +115,9 @@ class image_proc():
 		
     # Function to publish x_err, y_err and curr_marker_id
     def publish_slow(self, event):
-	self.x_err_pub.publish(self.x_error)
-	self.y_err_pub.publish(self.y_error)
-	self.curr_marker_pub.publish(self.curr_marker_id)
+        self.x_err_pub.publish(self.x_error)
+        self.y_err_pub.publish(self.y_error)
+        self.curr_marker_pub.publish(self.curr_marker_id)
 
 if __name__ == '__main__':
     img = image_proc()
