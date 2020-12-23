@@ -228,8 +228,7 @@ class Position():
 			curr_id = (self.building_flag + 1) % 2 + 2
 			self.marker_related_pub.publish("True,"+str(curr_id)+","+str(self.error[0])+","+str(self.error[1]))
 		else:
-			curr_id = (self.building_flag + 1) % 2 + 2
-			self.marker_related_pub.publish("False,"+str(curr_id))
+			self.marker_related_pub.publish("False")
 # ------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
