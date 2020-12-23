@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from time import sleep
+from vitarana_drone.msg import *
 from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String, Float32, Int32
 from cv_bridge import CvBridge, CvBridgeError
@@ -9,7 +10,6 @@ import numpy as np
 import rospy
 import math
 
-flag = 0
 class image_proc():
 
     # Initialise everything
@@ -40,28 +40,26 @@ class image_proc():
 	# Height from bottom range sensor
         self.z_m=0
         self.logo = ()
+	self.marker_data = MarkerData()
 	# Confirmation message for detection of the logo
         self.confirmation_msg = "False,0.0,0.0"
 	# Publisers for confirmation of detection,
 	# x_err, y_err and current marker id
         self.detect_confirm_pub = rospy.Publisher(
             '/detect_confirm', String, queue_size=1)
-	self.x_err_pub = rospy.Publisher(
-			'/edrone/err_x_m', Float32, queue_size=1)
-	self.y_err_pub = rospy.Publisher(
-			'/edrone/err_y_m', Float32, queue_size=1)
-	self.curr_marker_pub = rospy.Publisher(
-			'/edrone/curr_marker_id', Int32, queue_size=1)
-   
+	self.marker_data_pub = rospy.Publisher(
+			'/edrone/marker_data', MarkerData, queue_size=1)
 
     # Callback for marker info
     def marker_info(self, data):
         strdata = data.data.split(',')
-        self.curr_marker_id = int(strdata[1])
         if strdata[0] == 'True' :
+	    self.curr_marker_id = int(strdata[1])
             self.x_error = float(strdata[2])
             self.y_error = float(strdata[3])
+	# Publishing nan for error when not detected
         else:
+	    self.curr_marker_id = 0
             self.x_error = float("NaN")
             self.y_error = float("NaN")
 			
@@ -81,7 +79,6 @@ class image_proc():
 	
     # Function for detection and getting centeral pixel from the logo 
     def detectlogo(self, event):
-        global flag
         self.logo_cascade = cv2.CascadeClassifier('/home/rohan/catkin_ws/src/vitarana_drone/scripts/data/cascade.xml')
         sleep(0.05)
         # Making sure 400x400 image is received
@@ -115,13 +112,14 @@ class image_proc():
 		
     # Function to publish x_err, y_err and curr_marker_id
     def publish_slow(self, event):
-        self.x_err_pub.publish(self.x_error)
-        self.y_err_pub.publish(self.y_error)
-        self.curr_marker_pub.publish(self.curr_marker_id)
+        self.marker_data.err_x_m = self.x_error
+        self.marker_data.err_y_m = self.y_error
+        self.marker_data.marker_id = self.curr_marker_id
+	self.marker_data_pub.publish(self.marker_data)
+	
 
 if __name__ == '__main__':
     img = image_proc()
-
     # Using ros timer to publish at different frequencies in same node
     rospy.Timer(rospy.Duration(1.0 / 30.0), img.marker_distance)   #Frequency = 30 Hz
     rospy.Timer(rospy.Duration(1.0 / 30.0), img.detectlogo)     #Frequency = 30 Hz      
