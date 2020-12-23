@@ -204,9 +204,13 @@ class Position():
 				return
 			# If the final building is reached, then land
 			elif self.building_flag == 2:
-				self.waypoint[2] = self.buildingloc[self.building_flag][2] - 1
-				self.pid()
-				return
+				if abs(self.error[0]) > 0.01 or abs(self.error[1]) > 0.01:
+					self.pid()
+					return
+				else:
+					self.setpoint_rpy.rcThrottle = 1000
+					self.setpoint_pub.publish(self.setpoint_rpy)
+					return
 			# Reinitialising parameters for next building
 			self.detection_flag = 0
 			self.flag = 0
