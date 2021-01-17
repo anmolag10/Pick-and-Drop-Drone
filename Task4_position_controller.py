@@ -202,13 +202,12 @@ class Position():
         self.setpoint_pub.publish(self.setpoint_rpy)
 
     # Function for delivery state with left wall following bug
-    def delivery(self):
+    def pickup(self):
 	if not np.any(self.currentloc):
             return
 
 	else:
-	    self.spawnloc[0] = np.array([self.lat_to_x(
-            	self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
+	    self.spawnloc = np.currentloc
 
         # If obstacle detcted by left laser, set avoid flag
         if self.ranges[3] < 5 and self.ranges[3] > 0.3:
@@ -341,7 +340,7 @@ class Position():
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_pub.publish(self.setpoint_rpy)
 		self.start_detection_flag = 0
-		self.spawnloc = self.currentlocxy
+		self.spawnloc = self.currentloc
 		# Reinitialising parameters for next building
 		self.delivery_flag = 0
 		self.start_detection_flag = 0
@@ -351,17 +350,6 @@ class Position():
 
         # Calling PID function
         self.pid()
-
-        # Publish info to marker_related topic so it can be republished at 1Hz
-        # through detection script
-        if self.detection_flag == 1:
-            # 1st and 3rd building have been flipped in self.building_loc
-            curr_id = self.marker_id[self.building_flag]
-            self.marker_related_pub.publish(
-                "True," + str(curr_id) + "," + str(self.error[0]) + "," + str(self.error[1]))
-        else:
-            curr_id = self.marker_id[self.building_flag]
-            self.marker_related_pub.publish("False," + str(curr_id))
 
 # ------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
@@ -373,7 +361,7 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         # Call pickup function if delivery flag is 0 else call delivery
         # function
-        if e_drone_position.self.start_detection_flag == 0:
+        if e_drone_position.start_detection_flag == 0:
             e_drone_position.pickup()
         else:
             e_drone_position.detection()
