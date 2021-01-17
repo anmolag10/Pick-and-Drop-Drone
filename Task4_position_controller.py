@@ -22,7 +22,7 @@ class Position():
 	self.buildingloc = np.genfromtxt(os.path.expanduser(
             '~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'),delimiter=',', usecols = (1,2,3))
         # Location of package to pickup
-        self.pickuploc = np.array([18.9999864489, 71.9999430161, 8.44099749139], [18.9999864489 + 2 * 0.000013552, 71.9999430161, 8.44099749139], [18.9999864489 + 0.000013552, 71.9999430161 - 0.000014245, 8.44099749139])
+        self.pickuploc = np.array([[18.9999864489, 71.9999430161, 8.44099749139], [18.9999864489 + 2 * 0.000013552, 71.9999430161, 8.44099749139], [18.9999864489 + 0.000013552, 71.9999430161 - 0.000014245, 8.44099749139]])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -60,7 +60,7 @@ class Position():
         # Flag to switch state from building seek to detection
         self.start_detection_flag = 0
         # Flag to consider only one detection of marker
-        self.detection_flag = 0
+        self.delivery_flag = 0
         # Waypoint for trajectory
         self.waypoint = np.array([0, 0, 0])
         # Other variables needed to generate waypoints
@@ -202,12 +202,12 @@ class Position():
         self.setpoint_pub.publish(self.setpoint_rpy)
 
     # Function for delivery state with left wall following bug
-    def pickup(self):
+    def delivery(self):
 	if not np.any(self.currentloc):
             return
 
 	else:
-	    self.spawnloc = np.currentloc
+	    self.spawnloc = self.currentloc
 
         # If obstacle detcted by left laser, set avoid flag
         if self.ranges[3] < 5 and self.ranges[3] > 0.3:
@@ -261,13 +261,13 @@ class Position():
 		        self.waypoint = self.waypoint_generator(
 		            self.pickuploc[self.building_flag][0],
 		            self.pickuploc[self.building_flag][1],
-		            self.building_loc[self.building_flag][0],
-		            self.building_loc[self.building_flag][1],
+		            self.buildingloc[self.building_flag][0],
+		            self.buildingloc[self.building_flag][1],
 		            18)
-			if self.pickuploc[self.building_flag][2] > self.building_loc[self.building_flag][2]:
+			if self.pickuploc[self.building_flag][2] > self.buildingloc[self.building_flag][2]:
 				self.waypoint[2] = self.pickuploc[self.building_flag][2] + 3
 			else:
-				self.waypoint[2] = self.building_loc[self.building_flag][1] + 3
+				self.waypoint[2] = self.buildingloc[self.building_flag][2] + 3
 
 		elif self.delivery_flag == 0:
 			self.waypoint = self.waypoint_generator(
@@ -290,15 +290,16 @@ class Position():
             if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
                 return
             self.start_detection_flag = 1
+	    self.error = np.array([0, 0, 0])
+	    self.dt = 0
+	    self.prev_values = np.array([0, 0, 0])
+	    self.integral = np.array([0, 0, 0])
+	    self.t = 0
 
-	if self.t == 1 and self.delivery_flag == 0:
+	elif self.t == 1 and self.delivery_flag == 0:
        	    	# Reach goal with minimum error
-	   	if abs(self.error[0]) > 0.1:
+	   	if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
 	    		return
-	    	# Hover 0.7 m above until coordinates on box are detected
-	    	elif self.detectconf is not True:
-	    		self.waypoint[2] = self.pickuploc[2] + 0.7
-	    		# After detecting, drop on box and grip it
 	    	else:
 	    		self.setpoint_rpy.rcThrottle = 1000
 	    		self.setpoint_pub.publish(self.setpoint_rpy)
@@ -331,8 +332,8 @@ class Position():
 
         # After reaching marker
         elif ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1)):
-            if self.waypoint[2] != self.building_loc[self.building_flag][2]:
-                self.waypoint[2] = self.building_loc[self.building_flag][2]
+            if self.waypoint[2] != self.buildingloc[self.building_flag][2]:
+                self.waypoint[2] = self.buildingloc[self.building_flag][2]
             # When waypoint is within error threshold, deactivate gripper
             # Also switch off propellers
             elif abs(self.error[2]) < 0.2:
@@ -362,7 +363,7 @@ if __name__ == '__main__':
         # Call pickup function if delivery flag is 0 else call delivery
         # function
         if e_drone_position.start_detection_flag == 0:
-            e_drone_position.pickup()
+            e_drone_position.delivery()
         else:
             e_drone_position.detection()
         r.sleep()
