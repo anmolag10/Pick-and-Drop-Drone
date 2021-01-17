@@ -63,6 +63,8 @@ class Position():
         self.delivery_flag = 0
         # Waypoint for trajectory
         self.waypoint = np.array([0, 0, 0])
+	self.start = np.array([0, 0, 0])
+	self.end = np.array([0, 0, 0])
         # Other variables needed to generate waypoints
         self.dt = 0
         self.t = 0
@@ -249,58 +251,41 @@ class Position():
         else:
             if ((abs(self.error[0]) < 1 and abs(self.error[1]) < 1 and abs(
                     self.error[2]) < 0.1) or self.avoid_flag == 1) and self.t != 1:
-                # If previous state was avoidance then reset the location from which waypoints should be generated
-                # Also reset the avoid flag
-                if self.avoid_flag == 1:
-                    self.pickuploc = self.currentloc
-                    self.dt = 0
-                    self.t = 0
-                    self.avoid_flag = 0
                 # Generating waypoints to final goal with step size 18
+		if self.avoid_flag == 1:
+			self.start = self.currentloc
+			self.dt = 0
+			self.t = 0
+			self.avoid_flag = 0
 		elif self.delivery_flag == 1:
-		        self.waypoint = self.waypoint_generator(
-		            self.pickuploc[self.building_flag][0],
-		            self.pickuploc[self.building_flag][1],
-		            self.buildingloc[self.building_flag][0],
-		            self.buildingloc[self.building_flag][1],
-		            18)
-			if self.pickuploc[self.building_flag][2] > self.buildingloc[self.building_flag][2]:
-				self.waypoint[2] = self.pickuploc[self.building_flag][2] + 3
-			else:
-				self.waypoint[2] = self.buildingloc[self.building_flag][2] + 3
-
+			self.start = self.pickuploc[self.building_flag]
+			self.end = self.buildingloc[self.building_flag]
 		elif self.delivery_flag == 0:
-			self.waypoint = self.waypoint_generator(
-			    self.spawnloc[0],
-			    self.spawnloc[1],
-		            self.pickuploc[self.building_flag][0],
-		            self.pickuploc[self.building_flag][1],
-		            18)
-			if self.pickuploc[self.building_flag][2] > self.spawnloc[2]:
-				self.waypoint[2] = self.pickuploc[self.building_flag][2] + 3
-			else:
-				self.waypoint[2] = self.spawnloc[2] + 3
+			self.start = self.spawnloc
+			self.end = self.pickuploc[self.building_flag]
 
+		self.waypoint = self.waypoint_generator(
+		    self.start[0],
+		    self.start[1],
+		    self.end[0],
+		    self.end[1],
+		    18)
+		if self.start[2] > self.end[2]:
+			self.waypoint[2] = self.start[2] + 3
+		else:
+			self.waypoint[2] = self.end[2] + 3
+			
         # Call PID function for publishing control commands
         self.pid()
 
         # self.t == 1 implies that the current setpoint is the final goal
-        if self.t == 1 and self.delivery_flag == 1:
-                # Reach goal with minimum error
-            if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
-                return
-            self.start_detection_flag = 1
-	    self.error = np.array([0, 0, 0])
-	    self.dt = 0
-	    self.prev_values = np.array([0, 0, 0])
-	    self.integral = np.array([0, 0, 0])
-	    self.t = 0
-
-	elif self.t == 1 and self.delivery_flag == 0:
+	if self.t == 1:
        	    	# Reach goal with minimum error
 	   	if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
 	    		return
-	    	else:
+		elif self.delivery_flag == 1:
+			self.start_detection_flag = 1
+	    	elif self.delivery_flag == 0:
 	    		self.setpoint_rpy.rcThrottle = 1000
 	    		self.setpoint_pub.publish(self.setpoint_rpy)
 	    		gripper_response = self.gripper_activate(self.gripperState)
@@ -308,11 +293,13 @@ class Position():
 	    		# generate new waypoints
 	    		if gripper_response.result is True:
 				self.delivery_flag = 1
-				self.error = np.array([0, 0, 0])
-				self.dt = 0
-				self.prev_values = np.array([0, 0, 0])
-				self.integral = np.array([0, 0, 0])
-				self.t = 0
+			else:
+				return
+		self.error = np.array([0, 0, 0])
+		self.dt = 0
+		self.prev_values = np.array([0, 0, 0])
+		self.integral = np.array([0, 0, 0])
+		self.t = 0
 
     # Function for detection state
     def detection(self):
