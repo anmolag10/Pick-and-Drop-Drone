@@ -184,18 +184,18 @@ class Position():
         # Calculating error, derivative and integral
         self.error = np.round((self.waypoint - self.currentlocxy), 7)
         derivative = np.round(
-            ((self.currentlocxy - self.prev_values) / self.sample_time), 7)
+            ((self.error - self.prev_values) / self.sample_time), 7)
         self.integral = np.round(
             ((self.integral + self.error) * self.sample_time), 7)
         # PID output
         output = np.round(
-            ((self.Kp * self.error) + (self.Ki * self.integral) - (self.Kd * derivative)), 7)
+            ((self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
         # Final values for publishing after checking limits
         throttle = self.checkLimits(1500.0 + output[2])
         pitch = self.checkLimits(1500.0 - output[1])
         roll = self.checkLimits(1500.0 + output[0])
         # Assigning previous value with error for next iteration
-        self.prev_values = self.currentlocxy
+        self.prev_values = self.error
         # Publishing the commands
         self.setpoint_rpy.rcRoll = roll
         self.setpoint_rpy.rcPitch = pitch
