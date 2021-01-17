@@ -6,6 +6,7 @@ from sensor_msgs.msg import NavSatFix, LaserScan
 from std_msgs.msg import Float32, String
 import rospy
 import numpy as np
+import os
 from vitarana_drone.srv import Gripper
 import math
 
@@ -18,17 +19,10 @@ class Position():
 
 	self.spawnloc = np.array([0, 0, 0])
         # GPS coordinates of buildings with height 1m more than specified
-	self.buildingloc = np.array([[18.9993675932,
-                                      72.0000569892,
-                                      10.7 + 1],
-                                     [18.9990965925,
-                                      71.9999050292,
-                                      22.2 + 1],
-                                     [18.9990965928,
-                                      72.0000664814,
-                                      10.75 + 1]])
+	self.buildingloc = np.genfromtxt(os.path.expanduser(
+            '~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'),delimiter=',', usecols = (1,2,3))
         # Location of package to pickup
-        self.pickuploc = np.array([19.0007046575, 71.9998955286, 22.16])
+        self.pickuploc = np.array([18.9999864489, 71.9999430161, 8.44099749139], [18.9999864489 + 2 * 0.000013552, 71.9999430161, 8.44099749139], [18.9999864489 + 0.000013552, 71.9999430161 - 0.000014245, 8.44099749139])
 
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
@@ -188,18 +182,18 @@ class Position():
         # Calculating error, derivative and integral
         self.error = np.round((self.waypoint - self.currentlocxy), 7)
         derivative = np.round(
-            ((self.error - self.prev_values) / self.sample_time), 7)
+            ((self.currentlocxy - self.prev_values) / self.sample_time), 7)
         self.integral = np.round(
             ((self.integral + self.error) * self.sample_time), 7)
         # PID output
         output = np.round(
-            ((self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
+            ((self.Kp * self.error) + (self.Ki * self.integral) - (self.Kd * derivative)), 7)
         # Final values for publishing after checking limits
         throttle = self.checkLimits(1500.0 + output[2])
         pitch = self.checkLimits(1500.0 - output[1])
         roll = self.checkLimits(1500.0 + output[0])
         # Assigning previous value with error for next iteration
-        self.prev_values = self.error
+        self.prev_values = self.currentlocxy
         # Publishing the commands
         self.setpoint_rpy.rcRoll = roll
         self.setpoint_rpy.rcPitch = pitch
@@ -278,8 +272,8 @@ class Position():
 
 		elif self.delivery_flag == 0:
 			self.waypoint = self.waypoint_generator(
-			    self.spawnloc[0]
-			    self.spawnloc[1]
+			    self.spawnloc[0],
+			    self.spawnloc[1],
 		            self.pickuploc[self.building_flag][0],
 		            self.pickuploc[self.building_flag][1],
 		            18)
