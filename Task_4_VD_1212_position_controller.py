@@ -220,7 +220,7 @@ class Position():
                 self.prev_values = np.array([0, 0, 0])
             # Move backward by 1 m and maintain 3.5 m from the wall
             self.waypoint[1] = self.currentlocxy[1] - 1
-            self.waypoint[0] = self.currentlocxy[0] + (3.5 - self.ranges[3])
+            self.waypoint[0] = self.currentlocxy[0] + (3.5 - self.ranges[1])
 
         # If obstacle detcted by front laser, set avoid flag
         elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
