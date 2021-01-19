@@ -18,8 +18,6 @@ class image_proc():
 		rospy.init_node('node_qr_detect')  # Initialise rosnode
 		# Subscribing to the camera topic
 		rospy.Subscriber("/edrone/camera/image_raw", Image, self.image_callback)
-	# Subscribing to bottom range finder
-		rospy.Subscriber('/edrone/range_finder_bottom', LaserScan, self.globalheight)
 	# Subscring to marker_related
 		rospy.Subscriber('/marker_related', String, self.marker_info)
 
@@ -38,8 +36,6 @@ class image_proc():
 		self.curr_marker_id = 0
 	# Calculating focal length of the camera
 		self.focal_length = (200)/math.tan(1.3962634/2)
-	# Height from bottom range sensor
-		self.z_m=0
 		self.logo = ()
 		self.marker_data = MarkerData()
 	# Confirmation message for detection of the logo
@@ -96,8 +92,8 @@ class image_proc():
    # Function to calculate and publish the distance of drone from marker
 	def marker_distance(self, event):
 		if len(self.logo) is not 0:
-			x = self.x_center*self.z_m/self.focal_length
-			y = self.y_center*self.z_m/self.focal_length
+			x = self.x_center/self.focal_length
+			y = self.y_center/self.focal_length
 		# Publishing the confirmation message for the detection
 			self.confirmation_msg = "True,"+str(x)+","+str(y)
 			self.detect_confirm_pub.publish(self.confirmation_msg)
