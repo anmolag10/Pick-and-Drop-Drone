@@ -17,9 +17,9 @@ class Position():
         # initializing ros node with name position_controller
         rospy.init_node('node_position_controller')
 
-        self.spawnloc = np.array([0, 0, 0])
+	self.spawnloc = np.array([0, 0, 0])
         # GPS coordinates of buildings with height 1m more than specified
-        self.buildingloc = np.genfromtxt(os.path.expanduser(
+	self.buildingloc = np.genfromtxt(os.path.expanduser(
             '~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'),delimiter=',', usecols = (1,2,3))
         # Location of package to pickup
         self.pickuploc = np.array([[18.9999864489, 71.9999430161, 8.44099749139], [18.9999864489 + 2 * 0.000013552, 71.9999430161, 8.44099749139], [18.9999864489 + 0.000013552, 71.9999430161 + 0.000014245, 8.44099749139]])
@@ -40,10 +40,11 @@ class Position():
         self.iterator = 0
         self.building_flag = 0
         self.flag = 0
+        self.flag_once = 0
 
         # Parameters required for PID
         self.Kp = np.array([325, 325, 225]) * 0.6
-        self.Ki = np.array([4, 4, 4]) * 0.008
+        self.Ki = np.array([0, 0, 4]) * 0.008
         self.Kd = np.array([1625, 1625, 465]) * 0.3
         self.error = np.array([0, 0, 0])
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -62,7 +63,6 @@ class Position():
         self.first_detection  = 0
         # Flag to consider only one detection of marker
         self.delivery_flag = 0
-        self.flag_once = 0
         # Waypoint for trajectory
         self.waypoint = np.array([0, 0, 0])
         self.start = np.array([0, 0, 0])
@@ -215,43 +215,38 @@ class Position():
             self.flag = 1
 
         # If obstacle detcted by left laser, set avoid flag
-        if self.ranges[3] < 10 and self.ranges[3] > 0.3:
+        if self.ranges[3] < 5 and self.ranges[3] > 0.3:
             if self.avoid_flag == 0:
                 self.avoid_flag = 1
                 self.waypoint = self.currentlocxy
-                self.waypoint[0] = self.waypoint[0] + (6 - self.ranges[3])
             # Move backward by 1 m and maintain 3.5 m from the wall
             self.waypoint[1] = self.waypoint[1] - 10
 
         # If obstacle detcted by front laser, set avoid flag
-        elif self.ranges[0] < 10 and self.ranges[0] > 0.3:
+        elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
             if self.avoid_flag == 0:
                 self.avoid_flag = 1
                 self.waypoint = self.currentlocxy
-                self.waypoint[1] = self.waypoint[1] - (6 - self.ranges[0])
             # Move left by 1 m and maintain 3.5 m from the wall
             self.waypoint[0] = self.waypoint[0] - 10
             
 
         # If obstacle detcted by right laser, set avoid flag
-        elif self.ranges[1] < 10 and self.ranges[1] > 0.3:
+        elif self.ranges[1] < 5 and self.ranges[1] > 0.3:
             if self.avoid_flag == 0:
                 self.avoid_flag = 1
                 self.waypoint = self.currentlocxy
-                self.waypoint[0] = self.waypoint[0] - (6 - self.ranges[1])
             # Move front by 1 m and maintain 3.5 m from the wall
             self.waypoint[1] = self.waypoint[1] - 10
             
 
         # If obstacle detcted by back laser, set avoid flag
-        elif self.ranges[2] < 10 and self.ranges[2] > 0.3:
+        elif self.ranges[2] < 5 and self.ranges[2] > 0.3:
             if self.avoid_flag == 0:
                 self.avoid_flag = 1
                 self.waypoint = self.currentlocxy
-                self.waypoint[1] = self.waypoint[1] + (6 - self.ranges[2])
             # Move right by 1 m and maintain 3.5 m from the wall
             self.waypoint[0] = self.waypoint[0] + 10
-            
 
         # Main waypoint generating condition if no obstacle
         elif ((abs(self.error[0]) < 1 and abs(self.error[1]) < 1 and abs(
@@ -278,13 +273,12 @@ class Position():
                     self.end[1],
                     18)
                 if self.start[2] > self.end[2]:
-                    self.waypoint[2] = self.start[2] + 3
+                    self.waypoint[2] = self.start[2] + 6
                 else:
-                    self.waypoint[2] = self.end[2] + 3
-
+                    self.waypoint[2] = self.end[2] + 6
+			
         # Call PID function for publishing control commands
         self.pid()
-       
 
         if self.t == 1:
        	    # Reach goal with minimum error
@@ -322,18 +316,16 @@ class Position():
         # If detected, seek marker and drop to 5m above building for better
         # detection
         elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0:
-            
-            if ((abs(self.error[0]) < 0.2 and abs(self.error[1]) < 0.2)) or self.first_detection == 0:
-                self.waypoint[0] = self.currentlocxy[0] + \
-                    float(self.detectedcoord[1])
-                self.waypoint[1] = self.currentlocxy[1] + \
-                    float(self.detectedcoord[2]) 
-                self.waypoint[2] = self.buildingloc[self.building_flag][2] + 5
-                if self.first_detection == 0:
-                    self.first_detection = 1
-                    self.pid()
-                    return
-            if ((abs(self.error[0]) < 0.01 and abs(self.error[1]) < 0.01)):
+            self.waypoint[0] = self.currentlocxy[0] + \
+                float(self.detectedcoord[1])
+            self.waypoint[1] = self.currentlocxy[1] + \
+                float(self.detectedcoord[2]) 
+            self.waypoint[2] = self.buildingloc[self.building_flag][2] + 5
+            if self.first_detection == 0:
+                self.first_detection = 1
+                self.pid()
+                return
+            elif ((abs(self.error[0]) < 0.01 and abs(self.error[1]) < 0.01)):
                 self.waypoint[2] = self.buildingloc[self.building_flag][2]
                 self.delivery_flag = 1
 
@@ -345,19 +337,16 @@ class Position():
                 gripper_response = self.gripper_activate(False)
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_pub.publish(self.setpoint_rpy)
-                if gripper_reponse is False:
-                        self.start_detection_flag = 0
-                        self.spawnloc = self.currentloc
-                        # Reinitialising parameters for next building
-                        self.delivery_flag = 0
-                        self.iterator = 0
-                        self.side = 0
-                        self.building_flag += 1
-                        self.first_detection = 0
-                        self.error = np.array([0, 0, 0])
-                        return
-                else:
-                    return
+                self.start_detection_flag = 0
+                self.spawnloc = self.currentloc
+                # Reinitialising parameters for next building
+                self.delivery_flag = 0
+                self.iterator = 0
+                self.side = 0
+                self.building_flag += 1
+                self.first_detection = 0
+                self.error = np.array([0, 0, 0])
+                return
 
         # Calling PID function
         self.pid()
