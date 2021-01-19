@@ -38,7 +38,7 @@ class Position():
         # Parameters required for the search pattern
         self.side = 0
         self.iterator = 0
-        self.building_flag = 2
+        self.building_flag = 0
         self.flag = 0
 
         # Parameters required for PID
