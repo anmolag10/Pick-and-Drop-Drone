@@ -187,18 +187,18 @@ class Position():
         # Calculating error, derivative and integral
         self.error = np.round((self.waypoint - self.currentlocxy), 7)
         derivative = np.round(
-            ((self.error - self.prev_values) / self.sample_time), 7)
+            ((self.currentlocxy - self.prev_values) / self.sample_time), 7)
         self.integral = np.round(
             ((self.integral + self.error) * self.sample_time), 7)
         # PID output
         output = np.round(
-            ((self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * derivative)), 7)
+            ((self.Kp * self.error) + (self.Ki * self.integral) - (self.Kd * derivative)), 7)
         # Final values for publishing after checking limits
         throttle = self.checkLimits(1500.0 + output[2])
         pitch = self.checkLimits(1500.0 - output[1])
         roll = self.checkLimits(1500.0 + output[0])
         # Assigning previous value with error for next iteration
-        self.prev_values = self.error
+        self.prev_values = self.currentlocxy
         # Publishing the commands
         self.setpoint_rpy.rcRoll = roll
         self.setpoint_rpy.rcPitch = pitch
@@ -250,7 +250,7 @@ class Position():
             self.waypoint[0] = self.waypoint[0] + 10
 
         # Main waypoint generating condition if no obstacle
-        elif ((abs(self.error[0]) < 1 and abs(self.error[1]) < 1 and abs(
+        elif ((abs(self.error[0]) < 5 and abs(self.error[1]) < 5 and abs(
                     self.error[2]) < 0.1) or self.avoid_flag == 1) and self.t != 1:
                 # Generating waypoints to final goal with step size 18
                 if self.avoid_flag == 1:
@@ -272,7 +272,7 @@ class Position():
                     self.start[1],
                     self.end[0],
                     self.end[1],
-                    18)
+                    25)
                 if self.start[2] > self.end[2]:
                     self.waypoint[2] = self.start[2] + 6
                 else:
@@ -318,7 +318,7 @@ class Position():
         # detection
         elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0:
             self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2])
-            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2])
+            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2]) + 0.35
             self.waypoint[2] = self.buildingloc[self.building_flag][2] + 5
             self.delivery_flag = 1
             self.detection_count += 1
