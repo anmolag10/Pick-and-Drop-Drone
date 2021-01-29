@@ -18,8 +18,6 @@ class Scheduling():
 			'~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'), delimiter=",", engine="python", header = None)
 		self.manifest = [list(row) for row in self.file.values]
 		self.hash = dict(enumerate(self.manifest))
-
-		self.manifest = [list(row) for row in self.file.values]
 		for i, j in enumerate(self.manifest):
 			self.manifest[i] = [y for x in j for y in x.split(';')]
 
@@ -91,9 +89,6 @@ class Scheduling():
 				for i in self.returns:
 					w.writerow(self.hash[i[0]])
 			
-			
-
 if __name__ == '__main__':
-
     s = Scheduling()
     s.schedule_plan()
