@@ -19,9 +19,9 @@ class Scheduling():
 		self.manifest = [list(row) for row in self.file.values]
 		self.hash = dict(enumerate(self.manifest))
 
-		self.file = pd.read_csv(os.path.expanduser(
-			'~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'), delimiter=",|;", engine="python", header = None)
 		self.manifest = [list(row) for row in self.file.values]
+		for i, j in enumerate(self.manifest):
+			self.manifest[i] = [y for x in j for y in x.split(';')]
 
 		self.WH = np.array([18.999873523, 72.000142461, 16.757981])
 		self.deliveries = []
@@ -74,7 +74,7 @@ class Scheduling():
 				if dist < closest_dist:
 					closest_dist = dist
 					index = i
-					closest_ret = r[0] #shouldnt it be r[1] -AA
+					closest_ret = r[0]
 			if closest_dist < 1000:
 				self.returns.remove(self.returns[index])
 				self.paired.append([d[0], closest_ret])
