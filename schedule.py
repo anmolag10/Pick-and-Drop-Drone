@@ -56,8 +56,8 @@ class Scheduling():
 				self.returns.append([i,dist,x2,y2])
 
 		# Sorting lists according to distances 
-		self.deliveries.sort(key = lambda x : x[1])
-		self.returns.sort(key = lambda x : x[1])
+		self.deliveries.sort(reverse = True, key = lambda x : x[1])
+		self.returns.sort(reverse = True, key = lambda x : x[1])
 
 		self.length_d = len(self.deliveries)
 		self.length_r = len(self.returns)
@@ -78,6 +78,8 @@ class Scheduling():
 				self.paired.append([d[0], closest_ret])
 			else:
 				self.paired.append([d[0], -1])
+
+		print(self.paired)
 
 		with open('sequenced_manifest.csv', 'w') as f:
 			w = csv.writer(f)
