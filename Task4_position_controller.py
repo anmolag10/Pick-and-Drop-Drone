@@ -21,18 +21,15 @@ class Position():
         self.spawnloc = np.array([0, 0, 0])
         self.initial_loc = np.array([0, 0, 0])
         # GPS coordinates of buildings 
-        self.buildingloc = np.genfromtxt(os.path.expanduser(
-            '~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'),delimiter=',', usecols = (1,2,3))
-
-        # Extracting Package Grid name corresponding to building
-        colnames = ["grid","lat","lon","alt"]
-        data = pd.read_csv(os.path.expanduser(
-            '~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'), names=colnames)
-        self.grid_squares = data.grid.tolist()
+        self.file = pd.read_csv(os.path.expanduser(
+            '~/catkin_ws/src/vitarana_drone/scripts/sequenced_manifest.csv'), delimiter=",", engine="python", header = None)
+        self.manifest = [list(row) for row in self.file.values]
 
         # Location of each grid square in a dictionary for easy access 
-        self.pickuploc = {"A1": np.array([18.9999864489, 71.9999430161, 8.44099749139]) , "A2": np.array([18.9999864489, 71.9999430161 + 0.000014245, 8.44099749139]), "A3": np.array([18.9999864489, 71.9999430161 + 2 * 0.000014245, 8.44099749139]), "B1": np.array([18.9999864489 + 0.000013552, 71.9999430161, 8.44099749139]) , "B2": np.array([18.9999864489 + 0.000013552, 71.9999430161 + 0.000014245, 8.44099749139]), "B3": np.array([18.9999864489 + 0.000013552, 71.9999430161 + 2 * 0.000014245, 8.44099749139]), "C1": np.array([18.9999864489 +2 * 0.000013552, 71.9999430161, 8.44099749139]) , "C2": np.array([18.9999864489 + 2 * 0.000013552, 71.9999430161 + 0.000014245, 8.44099749139]), "C3": np.array([18.9999864489 + 2 * 0.000013552, 71.9999430161 + 2 * 0.000014245, 8.44099749139])}
+        self.pickuploc = {"A1": np.array([18.9998102845, 72.000142461, 16.757981]) , "A2": np.array([18.9998102845, 72.000142461 + 0.000014245, 16.757981]), "A3": np.array([18.9998102845, 72.000142461 + 2 * 0.000014245, 16.757981]), "B1": np.array([18.9998102845 + 0.000013552, 72.000142461, 16.757981]) , "B2": np.array([18.9998102845 + 0.000013552, 72.000142461 + 0.000014245, 16.757981]), "B3": np.array([18.9998102845 + 0.000013552, 72.000142461 + 2 * 0.000014245, 16.757981]), "C1": np.array([18.9998102845 +2 * 0.000013552, 72.000142461, 16.757981]) , "C2": np.array([18.9998102845 + 2 * 0.000013552, 72.000142461 + 0.000014245, 16.757981]), "C3": np.array([18.9998102845 + 2 * 0.000013552, 72.000142461 + 2 * 0.000014245, 16.757981])}
 
+        self.returnloc = {"X1": np.array([18.9999367615, 72.000142461, 16.757981]) , "X2": np.array([18.9999367615, 72.000142461 + 0.000014245, 16.757981]), "X3": np.array([18.9999367615, 72.000142461 + 2 * 0.000014245, 16.757981]), "Y1": np.array([18.9999367615 + 0.000013552, 72.000142461, 16.757981]) , "Y2": np.array([18.9999367615 + 0.000013552, 72.000142461 + 0.000014245, 16.757981]), "Y3": np.array([18.9999367615 + 0.000013552, 72.000142461 + 2 * 0.000014245, 16.757981]), "Z1": np.array([18.9999367615 +2 * 0.000013552, 72.000142461, 16.757981]) , "Z2": np.array([18.9999367615 + 2 * 0.000013552, 72.000142461 + 0.000014245, 16.757981]), "Z3": np.array([18.9999367615 + 2 * 0.000013552, 72.000142461 + 2 * 0.000014245, 16.757981])}
+        
         # Numpy array for current GPS location
         self.currentloc = np.array([0.0, 0.0, 0.0])
 	    # Current Location of drone in XYZ coordinate system
@@ -57,8 +54,8 @@ class Position():
 
         # Parameters required for PID
         self.Kp = np.array([325, 325, 225]) * 0.6
-        self.Ki = np.array([4, 4, 4]) * 0.008
-        self.Kd = np.array([1625, 1625, 465]) * 0.3
+        self.Ki = np.array([4, 4, 0]) * 0.008
+        self.Kd = np.array([1625, 1625, 365]) * 0.3
         self.error = np.array([0, 0, 0])
         self.prev_values = np.array([0.0, 0.0, 0.0])
         self.integral = np.array([0.0, 0.0, 0.0])
@@ -126,20 +123,25 @@ class Position():
 
     # For generating waypoints between (lat1, long1) and (lat2, long2)
     # dist is the distance between waypoints / step size
-    def waypoint_generator(self, lat1, lon1, lat2, lon2, dist):
-        x0, y0 = self.lat_to_x(lat1), self.long_to_y(lon1)
-        x1, y1 = self.lat_to_x(lat2), self.long_to_y(lon2)
+    def waypoint_generator(self, loc1, loc2):
+        x0, y0 = self.lat_to_x(loc1[0]), self.long_to_y(loc1[1])
+        x1, y1 = self.lat_to_x(loc2[0]), self.long_to_y(loc2[1])
         # Distance between coordinates
         d = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+        dist = 35
         # Distance of next waypoint from (lat1, long1)
         self.dt = self.dt + dist if (self.dt + dist) < d else d
         # Ratio of waypoint distance to total distance (is equal to 1 when at
         # final goal)
         self.t = self.dt / d
         # Waypoint [x,y,z], z = 25.16 which is 3 m above the spawn location
-        waypoint = np.array(
+        self.waypoint = np.array(
             [((1 - self.t) * x0 + self.t * x1), ((1 - self.t) * y0 + self.t * y1), 0])
-        return waypoint
+        # Setting waypoint height according to whichever point is higher (start or end)
+        if loc1[2] > loc2[2]:
+            self.waypoint[2] = loc1[2] + 10
+        else:
+            self.waypoint[2] = loc2[2] + 10
 
     # Function for checking limits of PID output
     def checkLimits(self, drone_command):
@@ -217,6 +219,36 @@ class Position():
         self.setpoint_rpy.rcThrottle = throttle
         self.setpoint_pub.publish(self.setpoint_rpy)
 
+    def start_end(self):
+        if self.manifest[self.building_flag][0] == "DELIVERY":
+            floats = [float(x) for x in self.manifest[self.building_flag][2].split(';')]
+            if self.delivery_flag == 1:
+                self.start = self.pickuploc[self.manifest[self.building_flag][1]]
+                self.end = np.array(floats)
+            else:
+                self.start = self.spawnloc
+                self.end = self.pickuploc[self.manifest[self.building_flag][1]]
+        else:
+            floats = [float(x) for x in self.manifest[self.building_flag][1].split(';')]
+            if self.delivery_flag == 1:
+                self.start = np.array(floats)
+                self.end = self.returnloc[self.manifest[self.building_flag][2]]
+            else:
+                self.start = self.spawnloc
+                self.end = np.array(floats)
+
+        if self.building_flag == len(self.manifest) + 1:
+            self.start = self.spawnloc
+            self.end = self.initial_loc
+
+        self.flag_once = 1
+    
+    def avoid_func(self, index, sign):
+        if self.avoid_flag == 0:
+            self.avoid_flag = 1
+            self.waypoint = self.currentlocxy
+        self.waypoint[index] = self.waypoint[index] + sign * 10
+
     # Function for delivery state with left wall following bug
     def delivery(self):
         if not np.any(self.currentloc):
@@ -229,39 +261,20 @@ class Position():
 
         # If obstacle detcted by left laser, set avoid flag
         if self.ranges[3] < 8 and self.ranges[3] > 0.3:
-            if self.avoid_flag == 0:
-                self.avoid_flag = 1
-                self.waypoint = self.currentlocxy
-            # Move backward 
-            self.waypoint[1] = self.waypoint[1] - 10
+            self.avoid_func(1, -1)
 
         # If obstacle detcted by front laser, set avoid flag
         elif self.ranges[0] < 8 and self.ranges[0] > 0.3:
-            if self.avoid_flag == 0:
-                self.avoid_flag = 1
-                self.waypoint = self.currentlocxy
-            # Move right
-            self.waypoint[0] = self.waypoint[0] - 10
+            self.avoid_func(0, -1)
             
-
         # If obstacle detcted by right laser, set avoid flag
         elif self.ranges[1] < 8 and self.ranges[1] > 0.3:
-            if self.avoid_flag == 0:
-                self.avoid_flag = 1
-                self.waypoint = self.currentlocxy
-            # Move backward
-            self.waypoint[1] = self.waypoint[1] - 10
-            
-
+            self.avoid_func(1, -1)
+        
         # If obstacle detcted by back laser, set avoid flag
         elif self.ranges[2] < 8 and self.ranges[2] > 0.3:
-            if self.avoid_flag == 0:
-                self.avoid_flag = 1
-                self.waypoint = self.currentlocxy
-            # Move right 
-            self.waypoint[0] = self.waypoint[0] + 10
+            self.avoid_func(0, 1)
             
-
         # Main waypoint generating condition if no obstacle
         elif ((abs(self.error[0]) < 5 and abs(self.error[1]) < 5 and abs(
                     self.error[2]) < 0.1 and self.t != 1) or self.avoid_flag == 1):
@@ -273,30 +286,11 @@ class Position():
                     self.t = 0
                     self.avoid_flag = 0
                 # Declaring initial start point only once
-                elif self.delivery_flag == 1 and self.flag_once == 0 and self.building_flag < 3:
-                    self.start = self.pickuploc[self.grid_squares[self.building_flag]]
-                    self.end = self.buildingloc[self.building_flag]
-                    self.flag_once = 1
-                elif self.delivery_flag == 0 and self.flag_once == 0 and self.building_flag < 3:
-                    self.start = self.spawnloc
-                    self.end = self.pickuploc[self.grid_squares[self.building_flag]]
-                    self.flag_once = 1
-                elif self.building_flag == 3 and self.flag_once == 0:
-                    self.start = self.buildingloc[2]
-                    self.end = self.initial_loc
-                    self.flag_once = 1
-                # Generating waypoints to final goal with step size 25
-                self.waypoint = self.waypoint_generator(
-                    self.start[0],
-                    self.start[1],
-                    self.end[0],
-                    self.end[1],
-                    25)
-                # Setting waypoint height according to whichever point is higher (start or end)
-                if self.start[2] > self.end[2]:
-                    self.waypoint[2] = self.start[2] + 6
-                else:
-                    self.waypoint[2] = self.end[2] + 6
+                elif self.flag_once == 0:
+                    self.start_end()
+                # Generating waypoints to final goal
+                self.waypoint_generator(self.start, self.end)
+                print(self.waypoint)
 
         # Call PID function for publishing control commands
         self.pid()
@@ -314,9 +308,9 @@ class Position():
                 self.detectconf = False
                 self.detectedcoord = [0.0, "0.0", "0.0"]
             # Picking up package
-            elif self.delivery_flag == 0 and self.building_flag < 3:
+            elif self.delivery_flag == 0:
                 gripper_response = self.gripper_activate(True)
-                self.waypoint[2] = self.pickuploc[self.grid_squares[self.building_flag]][2]
+                self.waypoint[2] = self.end[2]
                 # Set the delivery_flag and reinitialise some parameters to
                 # generate new waypoints
                 if gripper_response.result is True:
@@ -324,7 +318,7 @@ class Position():
                     self.flag_once = 0
                 else:
                     return
-            elif self.building_flag == 3:
+            elif self.building_flag == len(self.manifest) + 1:
                 self.setpoint_rpy.rcThrottle = 1000
                 self.setpoint_pub.publish(self.setpoint_rpy)
                 self.start_detection_flag = 2
@@ -340,12 +334,12 @@ class Position():
     def detection(self):
         # As soon as drone switches to detection state, start search
         if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(
-                self.error[2]) < 0.1)) and self.detectconf is False:
+                self.error[2]) < 0.1)) and self.detectconf is False and self.manifest[self.building_flag][0] == "DELIVERY":
             self.Search_pattern()
 
         # If detected, seek marker and drop to 5m above building for better
         # detection
-        elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0:
+        elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0 and self.manifest[self.building_flag][0] == "DELIVERY":
             self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2])
             # 0.35 is camera offset from drone centre
             self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2]) + 0.35
@@ -363,14 +357,13 @@ class Position():
                 return
             # When waypoint is within error threshold, deactivate gripper
             # Also switch off propellers
-            elif self.detection_count == 2 and (abs(self.error[0]) > 0.01 or abs(self.error[1]) > 0.01):
-                self.pid()
-                return
-            elif self.detection_count == 2:
-                self.waypoint[2] = self.buildingloc[self.building_flag][2]
+            elif self.detection_count == 2 and (abs(self.error[0]) < 0.01 or abs(self.error[1]) < 0.01):
                 self.detection_count += 1
-                self.pid()
-                return
+        
+        elif self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY":
+            if self.flag_once == 0:
+                self.waypoint[2] = self.end[2] 
+                self.flag_once = 1
             elif abs(self.error[2]) < 0.4:
                 gripper_response = self.gripper_activate(False)
                 if gripper_response.result is False:
@@ -383,6 +376,11 @@ class Position():
                     self.side = 0
                     self.building_flag += 1
                     self.error = np.array([0, 0, 0])
+                    self.flag_once = 0
+                    return
+                else:
+                    self.setpoint_rpy.rcThrottle = 1000
+                    self.setpoint_pub.publish(self.setpoint_rpy)
                     return
 
         # Calling PID function
@@ -403,4 +401,3 @@ if __name__ == '__main__':
         elif e_drone_position.start_detection_flag == 1:
             e_drone_position.detection()
         r.sleep()
-
