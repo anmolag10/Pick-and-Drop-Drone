@@ -337,6 +337,7 @@ class Position():
         # As soon as drone switches to detection state, start search
         if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(
                 self.error[2]) < 0.1)) and self.detectconf is False and self.manifest[self.building_flag][0] == "DELIVERY":
+            print(0)
             self.Search_pattern()
 
         # If detected, seek marker and drop to 5m above building for better
@@ -351,7 +352,7 @@ class Position():
             self.detection_count += 1
 
         # After reaching marker
-        elif (abs(self.error[0]) < 0.5 and abs(self.error[1]) < 0.5) and self.delivery_flag == 1:
+        elif (abs(self.error[0]) < 0.5 and abs(self.error[1]) < 0.5) and self.delivery_flag == 1 and self.detection_count < 3:
             # Detect and seek one more time
             if self.detection_count < 2:
                 self.delivery_flag = 0
@@ -361,14 +362,13 @@ class Position():
             elif self.detection_count == 2 and (abs(self.error[0]) < 0.01 or abs(self.error[1]) < 0.01):
                 print(2)
                 self.detection_count += 1
-                print(self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY")
         
         elif self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY":
             print(3)
             if self.flag_once == 0:
                 self.waypoint[2] = self.end[2] 
                 self.flag_once = 1
-            elif abs(self.error[2]) < 0.4:
+            elif abs(self.error[2]) < 0.3:
                 gripper_response = self.gripper_activate(False)
                 if gripper_response.result is False:
                     self.start_detection_flag = 0
