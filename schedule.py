@@ -17,7 +17,7 @@ class Scheduling():
 			'~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'), delimiter=",", engine="python", header = None)
 		self.manifest = [list(row) for row in self.file.values]
 		self.hash = dict(enumerate(self.manifest))
-		
+
 		self.file = pd.read_csv(os.path.expanduser(
 			'~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'), delimiter=",|;", engine="python", header = None)
 		self.manifest = [list(row) for row in self.file.values]
@@ -26,6 +26,9 @@ class Scheduling():
 		self.deliveries = []
 		self.returns = []
 		self.paired = []
+
+		self.length_d = 0
+		self.length_r = 0
 
 	# For convering latitude to X coordinate
 	def lat_to_x(self, input_latitude):
