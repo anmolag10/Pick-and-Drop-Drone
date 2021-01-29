@@ -74,7 +74,7 @@ class Scheduling():
 				if dist < closest_dist:
 					closest_dist = dist
 					index = i
-					closest_ret = r[0]
+					closest_ret = r[0] #shouldnt it be r[1] -AA
 			if closest_dist < 1000:
 				self.returns.remove(self.returns[index])
 				self.paired.append([d[0], closest_ret])
