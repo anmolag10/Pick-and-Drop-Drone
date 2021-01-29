@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import os
 import math
+import csv
 
 class Scheduling():
 
@@ -80,12 +81,16 @@ class Scheduling():
 			else:
 				self.paired.append([d[0], -1])
 
-		'''with open('sequenced_manifest.csv', 'w', newLine=" ") as f:
+		with open('sequenced_manifest.csv', 'w') as f:
 			w = csv.writer(f)
-			if self.length_d >= self.length_r:
-				for i in self.paired:
-					if(i[1] > -1):
-						w.writerow([])'''
+			for i in self.paired:
+				w.writerow(self.hash[i[0]])
+				if(i[1] > -1):
+					w.writerow(self.hash[i[1]])
+			if self.length_d < self.length_r:
+				for i in self.returns:
+					w.writerow(self.hash[i[0]])
+			
 			
 
 if __name__ == '__main__':
