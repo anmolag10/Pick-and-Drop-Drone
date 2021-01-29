@@ -167,7 +167,7 @@ class Position():
             self.side += 5
 
         if self.iterator == 0:
-            self.waypoint[2] = self.buildingloc[self.building_flag][2] + 10
+            self.waypoint[2] = self.end[2] + 10
 
         elif self.iterator % 4 == 0:
             self.waypoint[0] = self.currentlocxy[0] - self.side
@@ -290,15 +290,12 @@ class Position():
                     self.start_end()
                 # Generating waypoints to final goal
                 self.waypoint_generator(self.start, self.end)
-                print(self.waypoint)
-
-        # Call PID function for publishing control commands
-        self.pid()
 
         # After reaching end point
-        if self.t == 1:
+        elif self.t == 1:
        	    # Reach goal with minimum error
             if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
+                self.pid()
                 return
             # Switching to detection state
             elif self.delivery_flag == 1:
@@ -317,6 +314,8 @@ class Position():
                     self.delivery_flag = 1
                     self.flag_once = 0
                 else:
+                    self.setpoint_rpy.rcThrottle = 1000
+                    self.setpoint_pub.publish(self.setpoint_rpy)
                     return
             elif self.building_flag == len(self.manifest) + 1:
                 self.setpoint_rpy.rcThrottle = 1000
@@ -330,6 +329,9 @@ class Position():
             self.integral = np.array([0, 0, 0])
             self.t = 0
 
+        # Call PID function for publishing control commands
+        self.pid()
+
     # Function for detection state
     def detection(self):
         # As soon as drone switches to detection state, start search
@@ -340,14 +342,13 @@ class Position():
         # If detected, seek marker and drop to 5m above building for better
         # detection
         elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0 and self.manifest[self.building_flag][0] == "DELIVERY":
-            self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2])
+            print(1)
+            self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.end[2])
             # 0.35 is camera offset from drone centre
-            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.buildingloc[self.building_flag][2]) + 0.35
-            self.waypoint[2] = self.buildingloc[self.building_flag][2] + 5
+            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.end[2]) + 0.35
+            self.waypoint[2] = self.end[2] + 5
             self.delivery_flag = 1
             self.detection_count += 1
-            self.pid()
-            return
 
         # After reaching marker
         elif (abs(self.error[0]) < 0.5 and abs(self.error[1]) < 0.5) and self.delivery_flag == 1:
@@ -358,9 +359,12 @@ class Position():
             # When waypoint is within error threshold, deactivate gripper
             # Also switch off propellers
             elif self.detection_count == 2 and (abs(self.error[0]) < 0.01 or abs(self.error[1]) < 0.01):
+                print(2)
                 self.detection_count += 1
+                print(self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY")
         
         elif self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY":
+            print(3)
             if self.flag_once == 0:
                 self.waypoint[2] = self.end[2] 
                 self.flag_once = 1
