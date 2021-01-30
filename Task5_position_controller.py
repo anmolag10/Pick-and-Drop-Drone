@@ -10,6 +10,7 @@ import pandas as pd
 import os
 from vitarana_drone.srv import Gripper
 import math
+import time
 
 
 class Position():
@@ -44,7 +45,7 @@ class Position():
         # Parameters required for the search pattern
         self.side = 0
         self.iterator = 0
-        self.building_flag = 0
+        self.building_flag = 1
         # For intial spawn location only
         self.flag = 0
         # For declaring initial start and end points only once
@@ -54,7 +55,7 @@ class Position():
 
         # Parameters required for PID
         self.Kp = np.array([325, 325, 225]) * 0.6
-        self.Ki = np.array([4, 4, 0]) * 0.008
+        self.Ki = np.array([4, 4, 4]) * 0.008
         self.Kd = np.array([1625, 1625, 365]) * 0.3
         self.error = np.array([0, 0, 0])
         self.prev_values = np.array([0.0, 0.0, 0.0])
@@ -223,16 +224,16 @@ class Position():
         if self.manifest[self.building_flag][0] == "DELIVERY":
             floats = [float(x) for x in self.manifest[self.building_flag][2].split(';')]
             if self.delivery_flag == 1:
-                self.start = self.pickuploc[self.manifest[self.building_flag][1]]
+                self.start = self.pickuploc[self.manifest[self.building_flag][1].strip()]
                 self.end = np.array(floats)
             else:
                 self.start = self.spawnloc
-                self.end = self.pickuploc[self.manifest[self.building_flag][1]]
+                self.end = self.pickuploc[self.manifest[self.building_flag][1].strip()]
         else:
             floats = [float(x) for x in self.manifest[self.building_flag][1].split(';')]
             if self.delivery_flag == 1:
                 self.start = np.array(floats)
-                self.end = self.returnloc[self.manifest[self.building_flag][2]]
+                self.end = self.returnloc[self.manifest[self.building_flag][2].strip()]
             else:
                 self.start = self.spawnloc
                 self.end = np.array(floats)
@@ -260,19 +261,19 @@ class Position():
             self.flag = 1
 
         # If obstacle detcted by left laser, set avoid flag
-        if self.ranges[3] < 8 and self.ranges[3] > 0.3:
+        if self.ranges[3] < 5 and self.ranges[3] > 0.3:
             self.avoid_func(1, -1)
 
         # If obstacle detcted by front laser, set avoid flag
-        elif self.ranges[0] < 8 and self.ranges[0] > 0.3:
+        elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
             self.avoid_func(0, -1)
             
         # If obstacle detcted by right laser, set avoid flag
-        elif self.ranges[1] < 8 and self.ranges[1] > 0.3:
+        elif self.ranges[1] < 5 and self.ranges[1] > 0.3:
             self.avoid_func(1, -1)
         
         # If obstacle detcted by back laser, set avoid flag
-        elif self.ranges[2] < 8 and self.ranges[2] > 0.3:
+        elif self.ranges[2] < 5 and self.ranges[2] > 0.3:
             self.avoid_func(0, 1)
             
         # Main waypoint generating condition if no obstacle
@@ -291,11 +292,13 @@ class Position():
                 # Generating waypoints to final goal
                 self.waypoint_generator(self.start, self.end)
 
+        # Call PID function for publishing control commands
+        self.pid()
+
         # After reaching end point
-        elif self.t == 1:
+        if self.t == 1:
        	    # Reach goal with minimum error
             if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
-                self.pid()
                 return
             # Switching to detection state
             elif self.delivery_flag == 1:
@@ -311,11 +314,10 @@ class Position():
                 # Set the delivery_flag and reinitialise some parameters to
                 # generate new waypoints
                 if gripper_response.result is True:
+                    time.sleep(0.5)
                     self.delivery_flag = 1
                     self.flag_once = 0
                 else:
-                    self.setpoint_rpy.rcThrottle = 1000
-                    self.setpoint_pub.publish(self.setpoint_rpy)
                     return
             elif self.building_flag == len(self.manifest) + 1:
                 self.setpoint_rpy.rcThrottle = 1000
@@ -329,21 +331,16 @@ class Position():
             self.integral = np.array([0, 0, 0])
             self.t = 0
 
-        # Call PID function for publishing control commands
-        self.pid()
-
     # Function for detection state
     def detection(self):
         # As soon as drone switches to detection state, start search
         if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(
                 self.error[2]) < 0.1)) and self.detectconf is False and self.manifest[self.building_flag][0] == "DELIVERY":
-            print(0)
             self.Search_pattern()
 
         # If detected, seek marker and drop to 5m above building for better
         # detection
         elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0 and self.manifest[self.building_flag][0] == "DELIVERY":
-            print(1)
             self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.end[2])
             # 0.35 is camera offset from drone centre
             self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.end[2]) + 0.35
@@ -360,17 +357,16 @@ class Position():
             # When waypoint is within error threshold, deactivate gripper
             # Also switch off propellers
             elif self.detection_count == 2 and (abs(self.error[0]) < 0.01 or abs(self.error[1]) < 0.01):
-                print(2)
                 self.detection_count += 1
         
         elif self.detection_count == 3 or self.manifest[self.building_flag][0] != "DELIVERY":
-            print(3)
             if self.flag_once == 0:
                 self.waypoint[2] = self.end[2] 
                 self.flag_once = 1
             elif abs(self.error[2]) < 0.3:
                 gripper_response = self.gripper_activate(False)
                 if gripper_response.result is False:
+                    time.sleep(1)
                     self.start_detection_flag = 0
                     self.spawnloc = self.currentloc
                     # Reinitialising parameters for next building
