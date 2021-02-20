@@ -82,6 +82,7 @@ class Position():
         self.t = 0
         # Flag to check whether drone is in avoid state or goal seeking state
         self.avoid_flag = 0
+	self.height = 0
 
         # Ranges from range finder top
         self.ranges = np.array([26, 26, 26, 26, 26])
@@ -97,6 +98,7 @@ class Position():
         # Subscribers
         rospy.Subscriber('/edrone/gps', NavSatFix, self.gps_callback)
         rospy.Subscriber('/detect_confirm', String, self.confirm_cordinates)
+	rospy.Subscriber('/edrone/range_finder_bottom', LaserScan, self.height_callback)
         rospy.Subscriber(
             '/edrone/range_finder_top',
             LaserScan,
@@ -114,6 +116,11 @@ class Position():
     # Callback for GPS location
     def gps_callback(self, msg):
         self.currentloc = np.array([msg.latitude, msg.longitude, msg.altitude])
+
+    # Callback for height
+    def height_callback(self, msg):
+	if msg.ranges[0] > 4:
+	        self.height = msg.ranges[0]
 
     # For convering latitude to X coordinate
     def lat_to_x(self, input_latitude):
@@ -267,21 +274,23 @@ class Position():
             self.initial_loc = self.currentloc
             self.flag = 1
 
-        # If obstacle detcted by left laser
-        if self.ranges[3] < 5 and self.ranges[3] > 0.3:
-            self.avoid_func(1, -1)
+	# Avoid if still far from pickup location
+	if abs(self.error[0]) > 10 and abs(self.error[1]) > 10:
+		# If obstacle detcted by left laser
+		if self.ranges[3] < 5 and self.ranges[3] > 0.3:
+		    self.avoid_func(1, -1)
 
-        # If obstacle detcted by front laser
-        elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
-            self.avoid_func(0, -1)
-            
-        # If obstacle detcted by right laser
-        elif self.ranges[1] < 5 and self.ranges[1] > 0.3:
-            self.avoid_func(1, -1)
-        
-        # If obstacle detcted by back laser
-        elif self.ranges[2] < 5 and self.ranges[2] > 0.3:
-            self.avoid_func(0, 1)
+		# If obstacle detcted by front laser
+		elif self.ranges[0] < 5 and self.ranges[0] > 0.3:
+		    self.avoid_func(0, -1)
+		    
+		# If obstacle detcted by right laser
+		elif self.ranges[1] < 5 and self.ranges[1] > 0.3:
+		    self.avoid_func(1, -1)
+		
+		# If obstacle detcted by back laser
+		elif self.ranges[2] < 5 and self.ranges[2] > 0.3:
+		    self.avoid_func(0, 1)
             
         # Main waypoint generating condition if no obstacle
         elif ((abs(self.error[0]) < 10 and abs(self.error[1]) < 10 and abs(
@@ -305,9 +314,9 @@ class Position():
         # After reaching end point
         if self.t == 1:
        	    # Reach end point with minimum error
-            if abs(self.error[0]) > 20 or abs(self.error[1]) > 20:
+            if abs(self.error[0]) > 5 or abs(self.error[1]) > 5:
                 return
-            if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
+            elif abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
                 self.Kd = np.array([1625, 1625, 365]) * 0.3
                 return
             # Switching to drop state
@@ -349,15 +358,15 @@ class Position():
         # If detected, seek marker and drop to 5m above building for better
         # detection
         elif self.detectconf is True and self.detectedcoord[1] != "inf" and self.detectedcoord[1] != "-inf" and self.detectedcoord[1] != '0.0' and self.delivery_flag == 0 and self.manifest[self.building_flag][0] == "DELIVERY":
-            self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * (self.currentloc[2] - self.end[2])
+            self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * self.height
             # 0.35 is camera offset from drone centre
-            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * (self.currentloc[2] - self.end[2]) + 0.35
-            self.waypoint[2] = self.end[2] + 5
+            self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * self.height + 0.35
+            self.waypoint[2] = self.currentloc[2] - 5
             self.delivery_flag = 1
             self.detection_count += 1
 
         # After reaching marker
-        elif (abs(self.error[0]) < 1 and abs(self.error[1]) < 1) and self.delivery_flag == 1 and self.detection_count < 2:
+        elif (abs(self.error[0]) < 0.5 and abs(self.error[1]) < 0.5) and self.delivery_flag == 1 and self.detection_count < 2:
             # Detect and seek one more time
             if self.detection_count < 1:
                 self.delivery_flag = 0
@@ -369,9 +378,9 @@ class Position():
         # Deactivate gripper also switch off propellers
         elif self.detection_count == 2 or self.manifest[self.building_flag][0] != "DELIVERY":
             if self.flag_once == 0:
-                self.waypoint[2] = self.end[2] 
+                self.waypoint[2] = self.currentloc[2] - self.height
                 self.flag_once = 1
-            elif abs(self.error[2]) < 0.4 and self.flag_once == 1:
+            elif abs(self.error[2]) < 0.5 and self.flag_once == 1:
                 gripper_response = self.gripper_activate(False)
                 if gripper_response.result is False:
                     if self.grippercount < 3:
