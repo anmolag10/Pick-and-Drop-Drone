@@ -138,7 +138,7 @@ class Position():
         # Distance between coordinates
         d = math.hypot((x1 - x0), (y1 - y0))
         if d>100:
-            self.Kd = np.array([2925, 2925, 365]) * 0.3
+            self.Kd = np.array([2965, 2965, 365]) * 0.3
         elif d>15:
             self.Kd = np.array([2125, 2125, 365]) * 0.3
         else:
@@ -361,7 +361,7 @@ class Position():
             self.waypoint[0] = self.currentlocxy[0] + float(self.detectedcoord[1]) * self.height
             # 0.35 is camera offset from drone centre
             self.waypoint[1] = self.currentlocxy[1] + float(self.detectedcoord[2]) * self.height + 0.35
-            self.waypoint[2] = self.currentloc[2] - 5
+            self.waypoint[2] = self.currentloc[2] - self.height + 5
             self.delivery_flag = 1
             self.detection_count += 1
 
