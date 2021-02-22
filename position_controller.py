@@ -54,9 +54,9 @@ class Position():
         self.detection_count = 0
 
         # Parameters required for PID
-        self.Kp = np.array([325, 325, 225]) * 0.6
+        self.Kp = np.array([365, 365, 225]) * 0.6
         self.Ki = np.array([4, 4, 4]) * 0.008
-        self.Kd = np.array([1625, 1625, 365]) * 0.3
+        self.Kd = np.array([1725, 1725, 365]) * 0.3
         self.error = np.array([0, 0, 0])
         self.prev_values = np.array([0.0, 0.0, 0.0])
         self.integral = np.array([0.0, 0.0, 0.0])
@@ -137,13 +137,7 @@ class Position():
         x1, y1 = self.lat_to_x(loc2[0]), self.long_to_y(loc2[1])
         # Distance between coordinates
         d = math.hypot((x1 - x0), (y1 - y0))
-        if d>100:
-            self.Kd = np.array([2965, 2965, 365]) * 0.3
-        elif d>15:
-            self.Kd = np.array([2125, 2125, 365]) * 0.3
-        else:
-            self.Kd = np.array([1625, 1625, 365]) * 0.3
-        dist = d
+        dist = 35
         # Distance of next waypoint from (lat1, long1)
         self.dt = self.dt + dist if (self.dt + dist) < d else d
         # Ratio of waypoint distance to total distance (is equal to 1 when at
@@ -314,10 +308,7 @@ class Position():
         # After reaching end point
         if self.t == 1:
        	    # Reach end point with minimum error
-            if abs(self.error[0]) > 5 or abs(self.error[1]) > 5:
-                return
-            elif abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
-                self.Kd = np.array([1625, 1625, 365]) * 0.3
+            if abs(self.error[0]) > 0.1 or abs(self.error[1]) > 0.1:
                 return
             # Switching to drop state
             elif self.delivery_flag == 1:
@@ -366,7 +357,7 @@ class Position():
             self.detection_count += 1
 
         # After reaching marker
-        elif (abs(self.error[0]) < 0.5 and abs(self.error[1]) < 0.5) and self.delivery_flag == 1 and self.detection_count < 2:
+        elif (abs(self.error[0]) < 0.2 and abs(self.error[1]) < 0.2) and self.delivery_flag == 1 and self.detection_count < 2:
             # Detect and seek one more time
             if self.detection_count < 1:
                 self.delivery_flag = 0
