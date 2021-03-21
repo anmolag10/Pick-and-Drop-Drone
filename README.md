@@ -16,5 +16,5 @@
 <div align="center">
   <a href="https://youtu.be/G9XYRhGov2A"><img src="MetaCodes/Screenshot from 2021-03-22 00-48-48.png" alt="IMAGE ALT TEXT"></a>
 </div>
-     <h4> DISCLAIMER</h4>
-     <p> All the codes and models are property of EYRC, IIT BOMBAY as the clause of the competition states that</p>
+     <h4>DISCLAIMER</h4>
+     <p> All the codes and models are property of EYRC, IIT BOMBAY as the clause of the competition states.</p>
