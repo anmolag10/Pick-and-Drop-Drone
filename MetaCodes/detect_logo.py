@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-'''
-# Team ID:          1212
-# Theme:            Vitarana Drone
-# Author List:      Aditi Rao, Anmol Agarwal, Keshav Kapur
-# Filename:         position_controller.py
-# Functions:        init, image_callback, detectlogo, marker_distance
-# Global variables: None
-'''
-
 from time import sleep
 from vitarana_drone.msg import *
 from sensor_msgs.msg import Image, LaserScan
@@ -69,25 +60,8 @@ class image_proc():
             print(e)
             return
 
+    # Function for detection and getting centeral pixel from the logo
     def detectlogo(self, event):
-        '''
-        Purpose:
-        ---
-        For Detection and getting the central pixel of the detection
-
-        Input Arguments:
-        ---
-        event :  [ ]
-            Required for rospy.Timer
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.detectlogo()
-        '''
         self.logo_cascade = cv2.CascadeClassifier(os.path.expanduser(
             '~/catkin_ws/src/intro_cascade_classifiers_training_and_usage/data/cascade.xml'))
         sleep(0.05)
@@ -110,25 +84,8 @@ class image_proc():
         if cv2.waitKey(1) & 0XFF == ord('q'):
             cv2.destroyAllWindows()
 
+   # Function to calculate and publish the distance of drone from marker
     def marker_distance(self, event):
-        '''
-        Purpose:
-        ---
-        Function to calculate and publish the distance of drone from marker
-
-        Input Arguments:
-        ---
-        event :  [ ]
-            Required for rospy.Timer
-
-        Returns:
-        ---
-        None
-
-        Example call:
-        ---
-        self.marker_distance()
-        '''
         if len(self.logo) is not 0:
             x = self.x_center / self.focal_length
             y = self.y_center / self.focal_length
@@ -140,10 +97,7 @@ class image_proc():
             self.confirmation_msg = "False," + str(0.0) + "," + str(0.0)
             self.detect_confirm_pub.publish(self.confirmation_msg)
 
-# Function Name:    main (built in)
-#        Inputs:    None
-#       Outputs:    None
-#       Purpose:    To call the marker_distance() and detectlogo() functions 
+
 if __name__ == '__main__':
     img = image_proc()
     # Using ros timer to publish at different frequencies in same node

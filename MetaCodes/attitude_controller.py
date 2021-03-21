@@ -1,15 +1,7 @@
 #!/usr/bin/env python
 
-'''
-# Team ID:          1212
-# Theme:            Vitarana Drone
-# Author List:      Aditi Rao, Anmol Agarwal, Keshav Kapur
-# Filename:         position_controller.py
-# Functions:        init, imu_callback, drone_command_callback, checkLimits, pid
-# Global variables: None
-'''
-
 # Importing the required libraries
+
 from vitarana_drone.msg import *
 from pid_tune.msg import PidTune
 from sensor_msgs.msg import Imu
@@ -66,15 +58,25 @@ class Attitude():
         self.sample_rate = 50  # in Hz
         self.sample_time = 0.02  # in seconds
 
-        # Publishing /edrone/pwm
+        # Publishing /edrone/pwm, /roll_error, /pitch_error, /yaw_error
         self.pwm_pub = rospy.Publisher('/edrone/pwm', prop_speed, queue_size=1)
+        self.roll_error_pub = rospy.Publisher(
+            '/roll_error', Float32, queue_size=1)
+        self.pitch_error_pub = rospy.Publisher(
+            '/pitch_error', Float32, queue_size=1)
+        self.yaw_error_pub = rospy.Publisher(
+            '/yaw_error', Float32, queue_size=1)
 
-        # Subscribing to /drone_command, imu/data
+        # Subscribing to /drone_command, imu/data, /pid_tuning_roll,
+        # /pid_tuning_pitch, /pid_tuning_yaw
         rospy.Subscriber(
             '/edrone/drone_command',
             edrone_cmd,
             self.drone_command_callback)
         rospy.Subscriber('/edrone/imu/data', Imu, self.imu_callback)
+        rospy.Subscriber('/pid_tuning_roll', PidTune, self.roll_set_pid)
+        rospy.Subscriber('/pid_tuning_pitch', PidTune, self.pitch_set_pid)
+        rospy.Subscriber('/pid_tuning_yaw', PidTune, self.yaw_set_pid)
 
 # ------------------------------------------------------------------------------------------------------------
 
@@ -90,28 +92,27 @@ class Attitude():
     def drone_command_callback(self, msg):
         self.setpoint_cmd = np.array([msg.rcPitch, msg.rcRoll, msg.rcYaw])
         self.throttle = msg.rcThrottle
+
+    # Callback functions for /pid_tuning_roll, /pid_tuning_pitch, /pid_tuning_yaw
+    # These functions get executed each time /tune_pid publishes
+    def roll_set_pid(self, roll):
+        self.Kp[1] = roll.Kp * 0.06
+        self.Ki[1] = roll.Ki * 0.008
+        self.Kd[1] = roll.Kd * 0.03
+
+    def pitch_set_pid(self, pitch):
+        self.Kp[0] = pitch.Kp * 0.06
+        self.Ki[0] = pitch.Ki * 0.008
+        self.Kd[0] = pitch.Kd * 0.003
+
+    def yaw_set_pid(self, yaw):
+        self.Kp[2] = yaw.Kp * 0.06
+        self.Ki[2] = yaw.Ki * 0.008
+        self.Kd[2] = yaw.Kd * 0.03
  # ----------------------------------------------------------------------------------------------------------------------
 
+    # Function for checking limits of PID output
     def checkLimits(self, pwm):
-        '''
-        Purpose:
-        ---
-        For limiting the PID output to the PWM range that can be given to the motors
-
-        Input Arguments:
-        ---
-        drone_command :  [ float ]
-            The PID output 
-
-        Returns:
-        ---
-        No specific name :  [ int/float ] (type depends on which condition)
-            The limited value of PID output
-
-        Example call:
-        ---
-        self.checkLimits(output)
-        '''
         if pwm > self.max_value:
             return self.max_value
         elif pwm < self.min_value:
@@ -119,24 +120,8 @@ class Attitude():
         else:
             return pwm
 
+    # PID algorithm
     def pid(self):
-        '''
-        Purpose:
-        ---
-        Calculating motor values using PID based on setpoints
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.pid()
-        '''
         # Converting quaternion to euler angles
         self.drone_orientation_euler = np.array(
             tf.transformations.euler_from_quaternion(
@@ -194,13 +179,15 @@ class Attitude():
         # Assigning prev_values with error for the next iteration
         self.prev_values = error
 
+        # Publishing errors for Plotjuggler
+        self.roll_error_pub.publish(error[1])
+        self.pitch_error_pub.publish(error[0])
+        self.yaw_error_pub.publish(error[2])
+
         # Publishing final PID output on /edrone/pwm to move drone
         self.pwm_pub.publish(self.pwm_cmd)
 
-# Function Name:    main (built in)
-#        Inputs:    None
-#       Outputs:    None
-#       Purpose:    To call the pid() function
+
 if __name__ == '__main__':
 
     e_drone_attitude = Attitude()

@@ -1,15 +1,4 @@
 #!/usr/bin/env python
-'''
-# Team ID:          1212
-# Theme:            Vitarana Drone
-# Author List:      Aditi Rao, Anmol Agarwal, Keshav Kapur
-# Filename:         position_controller.py
-# Functions:        init, laser_callback, gps_callback, height_callback, 
-		            lat_to_x, long_to_y, waypoint_generator, checkLimits,
-		            confirm_coordinates, Search_pattern, checkGripper, pid,
-		            start_end, avoid_func, pickup, drop
-# Global variables: None
-'''
 
 # Importing the required libraries
 from vitarana_drone.msg import *
@@ -122,7 +111,7 @@ class Position():
         # Parameters required for PID
         self.Kp = np.array([325, 325, 225]) * 0.6
         self.Ki = np.array([4, 4, 4]) * 0.008
-        self.Kd = np.array([1805, 1805, 365]) * 0.3
+        self.Kd = np.array([1825, 1825, 365]) * 0.3
         self.error = np.array([0, 0, 0])
         self.prev_values = np.array([0.0, 0.0, 0.0])
         self.integral = np.array([0.0, 0.0, 0.0])
@@ -191,73 +180,17 @@ class Position():
         if msg.ranges[0] > 4:
             self.height = msg.ranges[0]
 
+    # For convering latitude to X coordinate
     def lat_to_x(self, input_latitude):
-        '''
-        Purpose:
-        ---
-        For converting latitude to X in XY coordinate system
-
-        Input Arguments:
-        ---
-        input_latitude :  [ float ]
-            Latitude that is to be converted to X coordinate
-
-        Returns:
-        ---
-        No specific name :  [ float ] 
-            converted X coordinate
-
-        Example call:
-        ---
-        self.lat_to_x(19.0)
-        '''
         return 110692.0702932625 * (input_latitude - 19)
 
+    # For converting longitude to Y coordinate
     def long_to_y(self, input_longitude):
-        '''
-        Purpose:
-        ---
-        For converting longitude to Y in XY coordinate system
-
-        Input Arguments:
-        ---
-        input_longitude :  [ float ]
-            Longitude that is to be converted to Y coordinate
-
-        Returns:
-        ---
-        No specific name :  [ float ] 
-            converted Y coordinate
-
-        Example call:
-        ---
-        self.long_to_y(72.0)
-        '''
         return -105292.0089353767 * (input_longitude - 72)
 
+    # For generating waypoints between (lat1, long1) and (lat2, long2)
+    # dist is the distance between waypoints / step size
     def waypoint_generator(self, loc1, loc2):
-        '''
-        Purpose:
-        ---
-        For generating waypoints between (lat1, long1) and (lat2, long2)
-        dist is the distance between waypoints or the step size
-
-        Input Arguments:
-        ---
-        loc1 :  [ Numpy array ]
-            Array of starting GPS coordinates
-
-        loc2 :  [ Numpy array ]
-            Array of ending GPS coordinates
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.waypoint_generator(np.array([19.0, 72.0, 3.0]), np.array([19.1, 72.1, 3.0]))
-        '''
         x0, y0 = self.lat_to_x(loc1[0]), self.long_to_y(loc1[1])
         x1, y1 = self.lat_to_x(loc2[0]), self.long_to_y(loc2[1])
         # Distance between coordinates
@@ -277,26 +210,8 @@ class Position():
         else:
             self.waypoint[2] = loc2[2] + 10
 
+    # Function for checking limits of PID output
     def checkLimits(self, drone_command):
-        '''
-        Purpose:
-        ---
-        For limiting the PID output to the PWM range that can be given to the motors
-
-        Input Arguments:
-        ---
-        drone_command :  [ float ]
-            The PID output 
-
-        Returns:
-        ---
-        No specific name :  [ int/float ] (type depends on which condition)
-            The limited value of PID output
-
-        Example call:
-        ---
-        self.checkLimits(output)
-        '''
         if drone_command > self.max_value:
             return self.max_value
         elif drone_command < self.min_value:
@@ -304,7 +219,7 @@ class Position():
         else:
             return drone_command
 
-    # Callback for detected marker information published by the detection script
+    # Callback for detected marker information
     def confirm_cordinates(self, data):
         strdata = data.data.split(',')
         if strdata[0] == 'True':
@@ -312,25 +227,9 @@ class Position():
             self.detectedcoord[1] = strdata[1]
             self.detectedcoord[2] = strdata[2]
 
+    # Square spiral search pattern that starts with a distance of 5 m at a
+    # height of 10 m
     def Search_pattern(self):
-        '''
-        Purpose:
-        ---
-        Square spiral search pattern that starts with a side of 5 m at a
-        height of 10 m
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.Search_pattern()
-        '''
         if(self.iterator % 2 == 0):
             self.side += 5
 
@@ -360,24 +259,8 @@ class Position():
         if data.data == "True":
             self.gripperState = True
 
+    # Function for PID control
     def pid(self):
-        '''
-        Purpose:
-        ---
-        Calculating motor values using PID based on setpoints
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.pid()
-        '''
         # Calculating XYZ coordinates
         self.currentlocxy = np.array([self.lat_to_x(
             self.currentloc[0]), self.long_to_y(self.currentloc[1]), self.currentloc[2]])
@@ -404,24 +287,6 @@ class Position():
         self.setpoint_pub.publish(self.setpoint_rpy)
 
     def start_end(self):
-        '''
-        Purpose:
-        ---
-        To set start and end points for waypoint generation based on whether the package is 
-        to be delivered or returned
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.start_end()
-        '''
         if self.manifest[self.building_flag][0] == "DELIVERY":
             floats = [float(x)
                       for x in self.manifest[self.building_flag][2].split(';')]
@@ -451,51 +316,13 @@ class Position():
         self.flag_once = 1
 
     def avoid_func(self, index, sign):
-        '''
-        Purpose:
-        ---
-        Setting new waypoints for avoidance mode based on which laser detected
-        and where to move
-
-        Input Arguments:
-        ---
-        index :  [ int ]
-            The index of the waypoint that is to be changed so that obstacle can be avoided
-
-        sign :  [ int ]
-            Sign required to know which side to move
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.avoid_func(0, -1)
-        '''
         if self.avoid_flag == 0:
             self.avoid_flag = 1
             self.waypoint = self.currentlocxy
         self.waypoint[index] = self.waypoint[index] + sign * 10
 
+    # Function for pickup state
     def pickup(self):
-        '''
-        Purpose:
-        ---
-        The function that handles everything related to the pickup of a package
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.pickup()
-        '''
         if not np.any(self.currentloc):
             return
         # Initial spawn location
@@ -560,7 +387,6 @@ class Position():
                 if gripper_response.result is True:
                     if self.grippercount < 5:
                         self.grippercount += 1
-                        return
                     else:
                         self.grippercount = 0
                         self.delivery_flag = 1
@@ -576,24 +402,8 @@ class Position():
             self.integral = np.array([0, 0, 0])
             self.t = 0
 
+    # Function for detection state
     def drop(self):
-        '''
-        Purpose:
-        ---
-        The function that handles everything related to the drop of a package including detection and returns
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.drop()
-        '''
         # As soon as drone switches to drop state, start search if not already
         # detected
         if ((abs(self.error[0]) < 0.1 and abs(self.error[1]) < 0.1 and abs(self.error[2]) < 0.1)
@@ -654,10 +464,7 @@ class Position():
         self.pid()
 
 
-# Function Name:    main (built in)
-#        Inputs:    None
-#       Outputs:    None
-#       Purpose:    To call the pickup() or drop() function based on the flag value
+# ------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
     e_drone_position = Position()

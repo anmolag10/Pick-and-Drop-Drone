@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-'''
-# Team ID:          1212
-# Theme:            Vitarana Drone
-# Author List:      Aditi Rao, Anmol Agarwal, Keshav Kapur
-# Filename:         position_controller.py
-# Functions:        init, lat_to_x, long_to_y, schedule_plan
-# Global variables: None
-'''
-
 # Importing the required libraries
 from std_msgs.msg import String
 import rospy
@@ -26,17 +17,16 @@ class Scheduling():
 
         # Reading manifest
         self.file = pd.read_csv(
-            os.path.expanduser('~/catkin_ws/src/vitarana_drone/scripts/original.csv'),
+            os.path.expanduser('~/catkin_ws/src/vitarana_drone/scripts/manifest.csv'),
             delimiter=",",
             engine="python",
             header=None)
         self.manifest = [list(row) for row in self.file.values]
-        # Hash Table to access strings of manifest easily to rewrite new manifest
+        # Hash Table to access strings of manifest easily to rewrite
         self.hash = dict(enumerate(self.manifest))
         # Creating list of coordinates
         for i, j in enumerate(self.manifest):
             self.manifest[i] = [y for x in j for y in x.split(';')]
-        # GPS coordinate between the A1 grid box of delivery pad and X1 grid box of returns pad
         self.WH = np.array([18.999873523, 72.000142461, 16.757981])
         self.deliveries = []
         self.returns = []
@@ -46,68 +36,15 @@ class Scheduling():
         self.length_d = 0
         self.length_r = 0
 
+    # For convering latitude to X coordinate
     def lat_to_x(self, input_latitude):
-        '''
-        Purpose:
-        ---
-        For converting latitude to X in XY coordinate system
-
-        Input Arguments:
-        ---
-        input_latitude :  [ float ]
-            Latitude that is to be converted to X coordinate
-
-        Returns:
-        ---
-        No specific name :  [ float ] 
-            converted X coordinate
-
-        Example call:
-        ---
-        self.lat_to_x(19.0)
-        '''
         return 110692.0702932625 * (input_latitude - 19)
 
+    # For converting longitude to Y coordinate
     def long_to_y(self, input_longitude):
-        '''
-        Purpose:
-        ---
-        For converting longitude to Y in XY coordinate system
-
-        Input Arguments:
-        ---
-        input_longitude :  [ float ]
-            Longitude that is to be converted to Y coordinate
-
-        Returns:
-        ---
-        No specific name :  [ float ] 
-            converted Y coordinate
-
-        Example call:
-        ---
-        self.long_to_y(72.0)
-        '''
         return -105292.0089353767 * (input_longitude - 72)
 
     def schedule_plan(self):
-        '''
-        Purpose:
-        ---
-        For scheduling deliveries and returns for the drone
-
-        Input Arguments:
-        ---
-        None
-
-        Returns:
-        ---
-        Does not return value but changes a member variable
-
-        Example call:
-        ---
-        self.schedule_plan(output)
-        '''
         # Warehouse location
         x1 = self.lat_to_x(self.WH[0])
         y1 = self.long_to_y(self.WH[1])
@@ -126,9 +63,9 @@ class Scheduling():
                 dist = math.hypot((x1 - x2), (y1 - y2))
                 self.returns.append([i, dist, x2, y2])
 
-        # Sorting lists according to distances in descending order
-        self.deliveries.sort(reverse=True, key=lambda x: x[1])
-        self.returns.sort(reverse=True, key=lambda x: x[1])
+        # Sorting lists according to distances
+        self.deliveries.sort(key=lambda x: x[1])
+        self.returns.sort(key=lambda x: x[1])
         self.length_d = len(self.deliveries)
         self.length_r = len(self.returns)
 
@@ -151,6 +88,9 @@ class Scheduling():
             else:
                 self.paired.append([d[0], -1])
 
+        # Doing furthest deliveries first to increase earnings
+        self.paired.reverse()
+
         # Rewriting sequenced manifest
         with open(os.path.expanduser(
                 '~/catkin_ws/src/vitarana_drone/scripts/sequenced_manifest.csv'), 'w') as f:
@@ -163,10 +103,7 @@ class Scheduling():
                 for i in self.returns:
                     w.writerow(self.hash[i[0]])
 
-# Function Name:    main (built in)
-#        Inputs:    None
-#       Outputs:    None
-#       Purpose:    To call the schedule_plan() function
+
 if __name__ == '__main__':
     s = Scheduling()
     s.schedule_plan()
