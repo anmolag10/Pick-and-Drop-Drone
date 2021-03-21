@@ -12,7 +12,6 @@
   <li><bold>schedule:</bold> A scheduler script for the delivery and return of the packages</li>
   </ul>
   <br><hr>
-  <h2> Simulation Video</h2>
-[![Simulation Video](http://i.imgur.com/Ot5DWAW.png)](https://youtu.be/G9XYRhGov2A "Drone")
-
-
+<div align="center">
+  <a href="https://youtu.be/G9XYRhGov2A"><img src="" alt="IMAGE ALT TEXT"></a>
+</div>
