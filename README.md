@@ -6,4 +6,13 @@
 <br>
 <h2> Scripts </h2>
 <p> The repository consists of following scripts:</p>
-<ul> <li><bold>attitude_controller:</bold>
+<ul> <li><bold>attitude_controller:</bold>< A pid script for controlling the roll, pitch and yaw of the drone and publising the commands to the drone./li>
+     <li><bold>position_controller: A pid script for controlling the position (in the form of way points)</li>
+     <li><bold>detect_logo:</bold> A Harr Cascade model for detecting the landing pad, implemented using openCV</li>
+  <li><bold>schedule:</bold> A scheduler script for the delivery and return of the packages</li>
+  </ul>
+  <br><hr>
+  <h2> Simulation Video</h2>
+  [![Simulation Video](http://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://youtu.be/G9XYRhGov2A"Video")
+
+
