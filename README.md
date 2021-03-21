@@ -13,6 +13,6 @@
   </ul>
   <br><hr>
   <h2> Simulation Video</h2>
-  [![Simulation Video](http://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://youtu.be/G9XYRhGov2A"Video")
+[![Simulation Video](http://i.imgur.com/Ot5DWAW.png)](https://youtu.be/G9XYRhGov2A "Drone")
 
 
