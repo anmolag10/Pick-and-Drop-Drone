@@ -6,3 +6,4 @@
 <br>
 <h2> Scripts </h2>
 <p> The repository consists of following scripts:</p>
+<ul> <li><bold>attitude_controller:</bold>
